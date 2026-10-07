@@ -493,6 +493,17 @@ let GAME_SPEED=0.72; // 1.0=normal, 0.7=mais lento, 1.3=mais rapido
 const W=1280,H=720,cv=document.getElementById('gc'),cx=cv.getContext('2d');cx.imageSmoothingEnabled=false;
 const IS_TOUCH = matchMedia('(hover:none)').matches || matchMedia('(pointer:coarse)').matches || ('ontouchstart' in window) || navigator.maxTouchPoints>0;
 let EXTRA_SCALE=1;
+// MODO DEV: os botoes 🛠️ (admin) e ⚙ (ajuste dos controles) so aparecem pra quem abriu com ?admin=1.
+// Fica lembrado no aparelho; ?admin=0 desliga. Jogador comum nunca ve.
+const DEV=(function(){let on=false;try{on=localStorage.getItem('mcs_dev')==='1';}catch(e){}
+  const m=/[?&#]admin=([01])/.exec(location.search+location.hash);
+  if(m){on=m[1]==='1';try{on?localStorage.setItem('mcs_dev','1'):localStorage.removeItem('mcs_dev');}catch(e){}}
+  return on;})();
+let HUD_R=0; // px do canvas que o lado direito do HUD recua pra nao ficar embaixo dos botoes ⏸ e ♪
+function calcHudR(s){try{const st=document.getElementById('stage').getBoundingClientRect(),c=cv.getBoundingClientRect();
+  const bx=(st.right-106-c.left)/s;HUD_R=Math.max(0,Math.min(140,Math.ceil(W-12-bx)));}catch(e){HUD_R=0;}}
+let HUD_Y=0; // px do canvas cortados no topo pela tela "cobrir" (celular comprido): o HUD desce isso pra nao sumir
+function hudTopo(){if(HUD_Y>0){cx.fillStyle="rgba(6,4,10,.62)";cx.fillRect(0,0,W,HUD_Y);cx.translate(0,HUD_Y);}}
 function vpW(){return (window.visualViewport?window.visualViewport.width:innerWidth);}
 function vpH(){return (window.visualViewport?window.visualViewport.height:innerHeight);}
 function fit(){
@@ -508,19 +519,23 @@ function fit(){
     const coverS=Math.max(availW/W,availH/H);    // "cobrir" tudo, mas pode cortar topo/base do HUD
     // limita o corte: cobre um pouco mais que "caber" pra aproveitar mais a tela
     // (o HUD e desenhado dentro do canvas - quanto maior o canvas exibido, maior o HUD tambem)
-    const s=Math.min(coverS,containS*1.16)*EXTRA_SCALE;
+    const s=Math.min(coverS,availW/W,containS*1.16)*EXTRA_SCALE;
     const sCap=Math.min(s,3.0);
     cv.style.width=Math.round(W*sCap)+'px';cv.style.height=Math.round(H*sCap)+'px';
+    HUD_Y=Math.max(0,Math.ceil((H*sCap-availH)/2/sCap));
     const stageBox=document.getElementById('stage');
     if(stageBox){stageBox.style.width=availW+'px';stageBox.style.height=availH+'px';
       stageBox.style.display='flex';stageBox.style.alignItems='center';stageBox.style.justifyContent='center';
       stageBox.style.overflow='hidden';}
+    calcHudR(sCap);
     return;
   }
+  HUD_Y=0;
   const chrome=(hdr?hdr.offsetHeight:0)+(ftr?ftr.offsetHeight:0)+56;
   const availH=vpH()-chrome;
   const s=Math.min(vpW()*0.97/W,availH/H,1.4);
   cv.style.width=Math.round(W*s)+'px';cv.style.height=Math.round(H*s)+'px';
+  calcHudR(s);
 }
 fit();addEventListener('resize',fit);
 if(IS_TOUCH){
@@ -562,26 +577,38 @@ function buildTrack(band){
   // TRILHA DA FASE: so COPOS DE CURA. O Uno saiu da rua e virou a FASE BONUS entre cenarios.
   // Os props ficam numa FILA e so entram no array "track" quando aparecem na tela (streamProps).
   const q=[];let wx=560,n=0;const im=IMG.props.copo,sc=PROP_CFG.copoScale;
-  const laneCima=Math.round((band.top+band.bottom)/2-(band.bottom-band.top)*0.18);
+  let laneCima=Math.round((band.top+band.bottom)/2-(band.bottom-band.top)*0.18);
+  {const dg=(P.phases[phaseIndex]||{}).degrau;if(dg&&((laneCima>dg.yPlat-4&&laneCima<dg.yRua+4)||(dg.yMinFora!==undefined&&laneCima<dg.yMinFora)))laneCima=dg.yRua+10;} // nada na face do degrau nem na parede
   // CARRO UNO estacionado no inicio da fase: plataforma fixa (nao quebra) pra subir e dar SLIDE no teto
-  if(CFG.UNO_NA_FASE&&IMG.props.uno){const u=IMG.props.uno.stages[0],us=CFG.UNO.scale;
-    const uw=u.w*us;q.push({type:"uno",wx:720+uw/2,w:uw,h:u.h*us,topH:PROP_CFG.unoTopH,solidTop:true,grind:true,fixo:true,sc:us,
-      y:laneCima,dmg:0,smokeT:0,hp:99,maxhp:99});
-    wx=720+uw+260;}
-  while(wx<CUR_WORLD_LEN-320){
-    n++;
-    // BANCO DE PRACA (estilo Redencao): faixa de cima, da pra subir e dar SLIDE
-    if(CFG.BANCO_A_CADA>0&&n%CFG.BANCO_A_CADA===0)
-      q.push({type:"banco",wx,w:220,h:95,topH:52,solidTop:true,grind:true,y:(n%4===0)?band.bottom-18:laneCima,dmg:0,smokeT:0,hp:1});
-    else if(Math.random()<CFG.OBST_CHANCE){
-      // OBSTACULO QUEBRAVEL: caixa de som do sound system ou latao de lixo (bloqueia a faixa, da pra subir)
-      const cx_=Math.random()<0.5,yy=Math.random()<0.5?laneCima:band.bottom-20;
-      q.push({type:cx_?"caixa":"latao",wx,w:cx_?96:74,h:cx_?110:90,topH:cx_?92:74,solidTop:true,breakable:true,
-        hp:CFG.OBST_HP,maxhp:CFG.OBST_HP,y:yy,dmg:0,smokeT:0,flashT:0});}
-    else
-    q.push({type:"copo",wx,w:im.w*sc,h:im.h*sc,topH:0,solidTop:false,y:band.bottom-24,dmg:0,smokeT:0,hp:1});
-    wx+=PROP_CFG.copoGap+Math.random()*PROP_CFG.gapRand;
-  }
+  // CARRO: com cenario longo fica ESTACIONADO 1:1 (preso no cenario, da pra subir e dar slide);
+  // com fundo de 1 tela vira enfeite de fundo (drawCarroFundo). So nas fases de CARRO_FASES.
+  if(CFG.UNO_NA_FASE&&IMG.props.uno&&(CFG.CARRO_FASES||[]).indexOf(phaseIndex)>=0&&ehPanorama(phaseIndex)){
+    const u=IMG.props.uno.stages[0],us=CFG.CARRO_ESCALA||0.43,uw=u.w*us,cxw=CUR_WORLD_LEN*(0.2+Math.random()*0.5);
+    q.push({type:"uno",wx:cxw,w:uw,h:u.h*us,topH:PROP_CFG.unoTopH*0.75,solidTop:true,grind:true,fixo:true,sc:us,
+      y:laneCima,dmg:0,smokeT:0,hp:99,maxhp:99});}
+  // SORTEIO DOS OBJETOS DA RUA (banco, caixa de som, lixeira): sem regra fixa.
+  // 1) a fase pode ou NAO ter objetos (PROPS_CHANCE_FASE); 2) quantos, tambem e sorteado (PROPS_MIN..PROPS_MAX);
+  // 3) tipo, lugar e faixa da calcada sorteados, com um espaco minimo entre eles pra nao empilhar.
+  const k=CFG.ESCALA_PROPS||1,iniX=520,fimX=CUR_WORLD_LEN-360;
+  const livre=(x,dist)=>q.every(o=>Math.abs(o.wx-x)>dist);
+  const sorteiaX=(dist)=>{for(let t=0;t<30;t++){const x=iniX+Math.random()*(fimX-iniX);if(livre(x,dist))return x;}return null;};
+  if(Math.random()<CFG.PROPS_CHANCE_FASE){
+    const qtd=CFG.PROPS_MIN+Math.floor(Math.random()*(CFG.PROPS_MAX-CFG.PROPS_MIN+1));
+    const pesos=[["banco",CFG.PESO_BANCO],["caixa",CFG.PESO_CAIXA],["latao",CFG.PESO_LATAO]],soma=pesos.reduce((a,p)=>a+p[1],0);
+    for(let i=0;i<qtd;i++){
+      const x=sorteiaX(CFG.PROPS_ESPACO);if(x===null)break;
+      let r=Math.random()*soma,tipo="banco";for(const[pt,pw]of pesos){if(r<pw){tipo=pt;break;}r-=pw;}
+      const yy=Math.random()<0.5?laneCima:band.bottom-20;
+      if(tipo==="banco")q.push({type:"banco",wx:x,w:Math.round(200*k),h:Math.round(95*k),topH:44,topH2:88,solidTop:true,grind:true,y:yy,dmg:0,smokeT:0,hp:1});
+      else{const cx_=tipo==="caixa",ci=cx_?IMG.props.caixaSom:IMG.props.lixeira,top_=(cx_?92:74);
+        const wArte=ci&&ci.w?Math.round(top_*kZ()/(cx_?0.95:0.98)*ci.w/ci.h*0.85):0;
+        q.push({type:cx_?"caixa":"latao",grind:!cx_,wx:x,w:wArte||Math.round((cx_?96:74)*k),h:Math.round((cx_?110:90)*k),topH:top_,solidTop:true,breakable:true,
+          hp:CFG.OBST_HP,maxhp:CFG.OBST_HP,y:yy,dmg:0,smokeT:0,flashT:0});}}}
+  // COPOS DE CURA: sorteio proprio (a cura nao pode depender da sorte dos objetos)
+  {const nc=CFG.COPOS_MIN+Math.floor(Math.random()*(CFG.COPOS_MAX-CFG.COPOS_MIN+1));
+   for(let i=0;i<nc;i++){const x=sorteiaX(160);if(x===null)break;
+     q.push({type:"copo",wx:x,w:im.w*sc,h:im.h*sc,topH:0,solidTop:false,y:band.bottom-24,dmg:0,smokeT:0,hp:1});}}
+  q.sort((a,b)=>a.wx-b.wx); // a fila precisa estar em ordem (entra na tela da esquerda pra direita)
   return q;
 }
 let track=[],trackQueue=[];
@@ -747,7 +774,7 @@ document.querySelectorAll('#tc .tb').forEach(b=>{const k=b.dataset.k;
 // ---------- painel de ajuste fino (só em toque) ----------
 (function(){
   const toggle=document.getElementById('dbgToggle'),panel=document.getElementById('dbgPanel');
-  if(!IS_TOUCH){return;}
+  if(!IS_TOUCH||!DEV){return;}
   toggle.style.display='flex';
   toggle.addEventListener('click',()=>{panel.style.display=panel.style.display==='block'?'none':'block';});
   const root=document.documentElement.style;
@@ -910,7 +937,7 @@ function preparaFase(i){
     [IMG.abacaxiParty,IMG.nicoBeach,IMG.nicoNessa].forEach(im=>im&&im._carregar&&im._carregar());
     AU.prepara("creditos");}
 }
-function startPhase(){preparaFase(phaseIndex);ckpt=null;Object.assign(est,{t:0,dano:0,pts0:score,cont:false});combo.max=0;notaFase=null;CUR_WORLD_LEN=Math.max((P.phases[phaseIndex]&&P.phases[phaseIndex].worldLen)||WORLD_LEN,CFG.FASE_LEN||0);const band=bandFor(phaseIndex);player=newPlayer(band);enemy=newEnemy(P.phases[phaseIndex].hp,phaseIndex,band);enemy.state="espera";enemy.wx=CUR_WORLD_LEN+400;
+function startPhase(){setTimeout(()=>{try{capangaSet(phaseIndex,0);capangaSet(phaseIndex,1);}catch(e){}},60);preparaFase(phaseIndex);ckpt=null;montaPostes();Object.assign(est,{t:0,dano:0,pts0:score,cont:false});combo.max=0;notaFase=null;{const fph=P.phases[phaseIndex]||{};CUR_WORLD_LEN=fph.faseLen||Math.max(fph.worldLen||WORLD_LEN,CFG.FASE_LEN||0);}const band=bandFor(phaseIndex);player=newPlayer(band);enemy=newEnemy(P.phases[phaseIndex].hp,phaseIndex,band);enemy.state="espera";enemy.wx=CUR_WORLD_LEN+400;
   trackQueue=buildTrack(band);track=[];bonus=null;lastBonusPts=null;mooks=[];hudAlvo=null;comboReset();AU.setFuryTempo(false);
   camX=0;sparks=[];rings=[];shots=[];fires=[];vinis=[];seq=[];timeLeft=99;
   invader=null;bannerT=0;agendaInvasao(true);planejaOndas();phaseResolved=false;scene="phase";fadeT=0.35;}
@@ -964,7 +991,7 @@ function impactBurst(wx,y,c,big){
 function addDmgNum(wx,y,val,crit,cor){dmgNums.push({wx,y,val,t:0.75,vy:-120,crit:!!crit,cor:cor});}
 function doHitStop(ms){hitStopT=Math.max(hitStopT,ms);}
 let bursts=[];
-function inReach(a,d,reach,depth){const dx=d.wx-a.wx;return Math.sign(dx)===a.facing&&Math.abs(dx)<reach&&Math.abs(d.y-a.y)<depth&&sameLane(a.y,d.y);}
+function inReach(a,d,reach,depth){const dx=d.wx-a.wx;return Math.sign(dx)===a.facing&&Math.abs(dx)<reach*kX()&&Math.abs(d.y-a.y)<depth&&sameLane(a.y,d.y);}
 // ---- lista de alvos: o vilao da fase e, se estiver na tela, o chefe invasor ----
 function alvos(){const a=[];
   if(enemy&&enemy.state!=="dead"&&enemy.state!=="espera")a.push(enemy);
@@ -976,7 +1003,7 @@ function alvos(){const a=[];
 function noQuadranteDoSoco(p,t){
   const dx=t.wx-p.wx,dy=t.y-p.y,dz=(t.z||0)-(p.z||0);
   const aFrente=Math.abs(dx)<1||Math.sign(dx)===p.facing;
-  return aFrente&&Math.abs(dx)<=CFG.PUNCH_RANGE_X&&Math.abs(dy)<=CFG.PUNCH_RANGE_Y&&Math.abs(dz)<=CFG.PUNCH_RANGE_Z;}
+  return aFrente&&Math.abs(dx)<=CFG.PUNCH_RANGE_X*kX()&&Math.abs(dy)<=CFG.PUNCH_RANGE_Y&&Math.abs(dz)<=CFG.PUNCH_RANGE_Z;}
 function alvoDoSoco(p){let best=null,bd=1e9;
   for(const t of alvos()){if(t.grabbed||!noQuadranteDoSoco(p,t))continue;
     const d=Math.abs(t.wx-p.wx);if(d<bd){bd=d;best=t;}}
@@ -989,6 +1016,8 @@ function emSequencia(e){return e.state==="breathwind"||e.state==="breath"
   ||e.state==="vinilwind"||e.state==="vinil";}
 function damageEnemy(dmg,kb,stun,tag,alvo,kind){const e=alvo||enemy;
   if(!e||e.state==="dead"||e.state==="espera")return;
+  if(e.getupT>0&&!e.grabbed)return;                         // deitado/levantando: invulneravel
+  if((kb||0)>=CFG.FINISHER_KB)e.derrubado=true;               // golpe forte derruba: vai ficar deitado ao cair
   hudAlvo=e;
   // DEFESA do vilao/boss (so fora da brecha)
   if(e.guarding&&e.vulnT<=0&&e.state!=="dead"){
@@ -1010,7 +1039,7 @@ function damageEnemy(dmg,kb,stun,tag,alvo,kind){const e=alvo||enemy;
   AU.hurt();e.hp-=dmg;e.flashT=0.14;shake=Math.max(shake,7);score+=dmg*10;
   vib((kb||0)>=1000||dmg>=10?28:12);   // hit leve 12ms · hit final/arremesso 28ms
   comboHit();if(kind==='chute')tut.chutou=true;
-  e.kbx=(Math.sign(e.wx-player.wx)||1)*(kb||190);
+  e.kbx=(Math.sign(e.wx-player.wx)||1)*(kb||190)*(CFG.KB_MUL||1.5);
   const big=(dmg>=20);
   impactBurst((player.wx+e.wx)/2,e.y-120,big?"#fff2c0":"#ffe36a",big);
   addDmgNum(e.wx,e.y-160,dmg,big);
@@ -1031,7 +1060,12 @@ function damageEnemy(dmg,kb,stun,tag,alvo,kind){const e=alvo||enemy;
     }
   }}
 // PORTAO UNICO DE DANO: fogo, disco, soco, chute e agarrao dos viloes passam por aqui
-function damagePlayer(dmg,deWx){if(player.hurtT>0||player.iframes>0||player.isInvincible)return;
+function derrubaMC(ox){const p=player;
+  p.seqHits=0;p.downT=CFG.QUEDA_CHAO;p.hurtT=0;p.kbx=(Math.sign(p.wx-ox)||-1)*420;
+  p.isInvincible=true;p.invincibleTimer=CFG.QUEDA_CHAO/GAME_SPEED+CFG.LEVANTA_INVENCIVEL; // no chao + levantando: ninguem bate
+  p.atkT=p.kickT=p.throwT=p.segT=0;p.grindMode=null;p.grinding=false;p.airAtk=false;p.escaping=false;
+  shake=Math.max(shake,12);vib([40,30,60]);addDmgNum(p.wx,p.y-200,"CAIU!",true,"#ff5a4a");}
+function damagePlayer(dmg,deWx){if(player.hurtT>0||player.iframes>0||player.isInvincible||player.downT>0)return;
   if(player.guarding&&player.z===0){
     // REGRA: guarda nao pode ser segurada pra sempre. A cada bloqueio consecutivo
     // conta um "elo"; no 4o elo seguido a guarda quebra (dano reduzido passa e cambaleia).
@@ -1055,6 +1089,10 @@ function damagePlayer(dmg,deWx){if(player.hurtT>0||player.iframes>0||player.isIn
   AU.hurt();player.hp-=dmg;player.flashT=0.12;vib([30,40,30]);comboFecha(true);tut.levouDano=true;est.dano+=dmg; // levou dano: padrao duplo, diferente de bater
   const ox=(deWx===undefined)?enemy.wx:deWx;
   shake=Math.max(shake,8);player.kbx=(Math.sign(player.wx-ox)||-1)*170;player.hurtT=0.32;
+  if(player.throwTgt){player.throwTgt.grabbed=false;player.throwTgt=null;player.segT=0;player.throwT=0;}
+  // ANTI-PRISAO: 3 golpes seguidos (ou um muito forte) derrubam o MC; ele levanta invencivel
+  {const now=performance.now();player.seqHits=(now-(player.ultHitT||0)<CFG.QUEDA_JANELA*1000)?(player.seqHits||0)+1:1;player.ultHitT=now;
+   if(player.seqHits>=CFG.QUEDA_HITS||dmg>=CFG.QUEDA_DANO)derrubaMC(ox);}
   impactBurst((player.wx+ox)/2,player.y-120,"#ff9b7a",dmg>=15);
   addDmgNum(player.wx,player.y-160,dmg,false);
   doHitStop(dmg>=15?0.07:0.04);
@@ -1420,7 +1458,7 @@ function alvoColado(p){let best=null,bd=1e9;
   for(const t of alvos()){
     if(t.state==="entrando"||t.state==="saindo"||(t.z||0)>6||t.grabbed)continue;
     const dx=Math.abs(t.wx-p.wx),dy=Math.abs(t.y-p.y);
-    if(dx<=CFG.GRAB_X&&dy<=CFG.GRAB_Y&&dx<bd){bd=dx;best=t;}}
+    if(dx<=CFG.GRAB_X*kX()&&dy<=CFG.GRAB_Y&&dx<bd){bd=dx;best=t;}}
   return best;}
 // 👊 no chao: colado = agarrao; longe = proximo hit do combo automatico
 function socoNoChao(p){const t=alvoColado(p);if(t)return startGrabThrow(p,t);startComboHit(p);}
@@ -1430,12 +1468,18 @@ function startComboHit(p){
   p.atkFinisher=p.comboStep>=CFG.COMBO_HITS;
   p.state="attack";p.atkT=0.30;p.atkHit=false;p.skAnim=0;p.atkId=(p.atkId||0)+1;AU.punch();}
 // AGARRAO + ARREMESSO DE RUA: segura, gira o skate e joga o vilao por cima da cabeca
+// AGARRAO (Final Fight): segura -> 👊 = JOELHADA (ate JOELHADAS_MAX; a ultima arremessa)
+//   🕹️ pra TRAS + 👊 = arremesso pra tras · 🕹️ pra FRENTE + 👊 (ou 🦵) = arremesso pra frente
+//   demorou (GRAB_HOLD) = arremessa pra tras sozinho. Levar golpe solta o vilao.
 function startGrabThrow(p,t){
-  tut.agarrou=true;p.comboStep=0;p.throwT=CFG.THROW_T;p.throwTgt=t;p.state="throw";p.skAnim=0;p.mvx=0;p.mvy=0;
-  p.iframes=Math.max(p.iframes,CFG.THROW_T+0.1);
+  tut.agarrou=true;p.comboStep=0;p.throwT=0;p.segT=CFG.GRAB_HOLD;p.joelhadas=0;p.joelhaT=0;p.throwDir="tras";
+  p.throwTgt=t;p.state="throw";p.skAnim=0;p.mvx=0;p.mvy=0;
+  p.iframes=Math.max(p.iframes,0.25);
   p.facing=(t.wx>=p.wx)?1:-1;
-  t.grabbed=true;t.guarding=false;t.guardT=0;t.state="hurt";t.hurtT=CFG.THROW_T+0.3;t.kbx=0;t.vz=0;
+  t.grabbed=true;t.guarding=false;t.guardT=0;t.state="hurt";t.hurtT=CFG.GRAB_HOLD+CFG.THROW_T+0.3;t.kbx=0;t.vz=0;
   addDmgNum(t.wx,t.y-170,"AGARRÃO!",false,"#ffcf33");AU.jumpSfx();shake=Math.max(shake,4);}
+function iniciaArremesso(p,dir){p.segT=0;p.throwDir=dir;p.throwT=CFG.THROW_T;p.iframes=Math.max(p.iframes,CFG.THROW_T+0.1);
+  addDmgNum(p.wx,p.y-210,dir==="frente"?"ARREMESSO PRA FRENTE!":"ARREMESSO!",true,"#ffcf33");}
 function soltaArremesso(p){const t=p.throwTgt;p.throwTgt=null;
   if(!t)return;t.grabbed=false;
   damageEnemy(Math.round(HERO().dmgSoco*3),CFG.THROW_KB,1.0,null,t,'arremesso');
@@ -1471,19 +1515,46 @@ function startEscapeJump(p,dx){
 // ===== SLIDE (GRIND): ⤴️ + 🦵 com o chute SEGURADO =====
 // Superficies: meio-fio (bordas de cima/baixo da calcada), banco de praca, carro Uno e cabeca do vilao.
 // Solta o 🦵 = sai do slide. ⤴️ durante o slide = ollie pra fora.
-function pertoMeioFio(p){const b=curBand();return Math.min(Math.abs(p.y-b.top),Math.abs(p.y-b.bottom))<=CFG.CURB_MARGIN;}
+// =====================================================================
+// DEGRAU (ex.: plataforma do Trensurb): a calcada de cima e mais alta que a rua.
+// Subir: SO PULANDO (altura suficiente). Descer: anda e cai. A borda inteira e
+// grindavel (slide por todo o degrau, sem limite de tempo).
+// Dados da fase: degrau:{yPlat: borda da plataforma, yRua: pe do degrau na rua}
+// =====================================================================
+function degrauFase(){const ph=P.phases[enemy?enemy.pi:phaseIndex];return ph&&ph.degrau||null;}
+// degrau pode valer so num trecho da fase (xIni..xFim, ex.: palco da Concha Acustica).
+// Fora do trecho, ninguem passa acima de yMinFora (a parede/fundo do cenario).
+function degrauAtivo(dg,x){return dg.xIni===undefined||(x>=dg.xIni&&x<=dg.xFim);}
+function aplicaDegrau(e,prevY,ehVilao,alvoY){
+  const dg=degrauFase();if(!dg)return;
+  const yP=dg.yPlat,yR=dg.yRua,dz=(yR-yP)/kZ();
+  if(!degrauAtivo(dg,e.wx)){                             // fora do trecho do degrau
+    const lim=dg.yMinFora!==undefined?dg.yMinFora:yR;
+    if(e.y<lim){
+      if(prevY<=yP+0.5){e.y=lim;e.z=(e.z||0)+(lim-yP)/kZ();if(e.vz>0)e.vz=0;} // saiu pela ponta da plataforma: cai
+      else e.y=lim;}
+    return;}
+  if(e.y>yP&&e.y<yR){                                   // na face do degrau
+    if(prevY<=yP+0.5){e.y=yR;e.z=(e.z||0)+dz;if(e.vz>0)e.vz=0;}          // desceu da plataforma: cai
+    else if((e.z||0)>=dz+2&&prevY>=yR-0.5){e.y=yP;e.z-=dz;}               // pulou alto: sobe
+    else{e.y=yR;                                                          // bateu no degrau
+      if(ehVilao&&(e.z||0)<=0&&e.vz===0&&(alvoY===undefined||alvoY<=yP+1))e.vz=CFG.DEGRAU_PULO_VILAO;}}}
+function pertoDegrau(p){const dg=degrauFase();return !!dg&&degrauAtivo(dg,p.wx)&&(Math.abs(p.y-dg.yPlat)<=CFG.CURB_MARGIN||Math.abs(p.y-dg.yRua)<=CFG.CURB_MARGIN);}
+function pertoMeioFio(p){const b=curBand();return pertoDegrau(p)||Math.min(Math.abs(p.y-b.top),Math.abs(p.y-b.bottom))<=CFG.CURB_MARGIN;}
 function alturaCabeca(t){const fr=enFrame(t);const porte=t.sizeMul||(IMG.phases[t.pi]&&IMG.phases[t.pi].sizeMul)||1;
-  return fr?Math.max(80,fr.h*dscale(t.y)*CHAR_SCALE*porte*0.9):160;}
+  return (fr?Math.max(80,fr.h*dscale(t.y)*escalaChar()*porte*0.9):160)/kZ();}
 function startGrind(p,mode,tgt){
   p.grindMode=mode;p.grindTgt=tgt||null;p.grindT=0;p.grindDir=p.facing||1;p.grindTick=0.05;p.grindHits=0;p.grindHitSet=[];
   p.grinding=true;p.skating=true;p.state="skate";p.airAtk=false;p.airHit=false;p.escaping=false;p.vz=0;p.mvy=0;p.skAnim=0;
   p.comboStep=0;p.atkT=0;p.kickT=0;
   Object.assign(p,{manobra:null,manobraUlt:null,manobraN:0,manobraCd:0,manobraSet:{},manobraBonus:false,hopT:0,grindExtra:0});
-  if(mode==="meiofio"){const b=curBand();p.y=(Math.abs(p.y-b.top)<Math.abs(p.y-b.bottom))?b.top:b.bottom;p.z=0;p.__onProp=null;}
-  else if(mode==="prop"){p.z=tgt.topH;p.__onProp=tgt;}
+  p.grindDegrau=false;
+  if(mode==="meiofio"&&pertoDegrau(p)){p.y=degrauFase().yPlat;p.z=0;p.__onProp=null;p.grindDegrau=true;} // slide na borda do degrau
+  else if(mode==="meiofio"){const b=curBand();p.y=(Math.abs(p.y-b.top)<Math.abs(p.y-b.bottom))?b.top:b.bottom;p.z=0;p.__onProp=null;}
+  else if(mode==="prop"){p.z=p.grindZ||tgt.topH;p.__onProp=tgt;p.y=tgt.y;}
   else if(mode==="cabeca"){p.grindOff=p.wx-tgt.wx;p.y=tgt.y;p.z=alturaCabeca(tgt);p.__onProp=null;}
   tut.slide=true;shake=Math.max(shake,4);AU.jumpSfx();vib(15);addDmgNum(p.wx,p.y-p.z-120,"SLIDE!",false,"#bfe8ff");}
-function endGrind(p,ollie){const m=p.grindMode;p.grindMode=null;p.grindTgt=null;p.grinding=false;p.manobra=null;p.hopT=0;
+function endGrind(p,ollie){const m=p.grindMode;p.grindZ=null;p.grindMode=null;p.grindTgt=null;p.grinding=false;p.manobra=null;p.hopT=0;
   if(ollie){p.vz=CFG.JUMP_VZ*0.9;p.jumpsUsed=1;p.escapeUsed=false;p.lastJumpTap=performance.now();p.state="jump";AU.jumpSfx();}
   else if(m==="cabeca"){p.vz=CFG.GRIND_HOP_VZ;p.jumpsUsed=1;p.state="jump";}
   else if(m==="meiofio"){p.skating=false;p.state="land";p.landT=0.12;p.jumpsUsed=0;}
@@ -1548,13 +1619,14 @@ function updateGrind(p,dt){
     if(Math.abs(p.wx-alvoX)>0.5){endGrind(p,false);return;}          // bateu na borda da tela
     if(p.grindMode==="prop"){const pr=p.grindTgt;
       if(!pr||track.indexOf(pr)<0||pr.exploded||Math.abs(p.wx-pr.wx)>pr.w*0.42){p.__onProp=null;p.airAtk=false;endGrind(p,false);return;}
-      p.z=pr.topH+pulinhoManobra(p);p.__onProp=pr;
+      p.z=(p.grindZ||pr.topH)+pulinhoManobra(p);p.__onProp=pr;
     }else{ // meio-fio: tromba e empurra quem estiver no caminho
       for(const t of alvos()){if(p.grindHitSet.includes(t))continue;
-        if(Math.abs(t.wx-p.wx)<70&&Math.abs(t.y-p.y)<40&&(t.z||0)<20){p.grindHitSet.push(t);
+        if(Math.abs(t.wx-p.wx)<70*kX()&&Math.abs(t.y-p.y)<40&&(t.z||0)<20){p.grindHitSet.push(t);
           damageEnemy(Math.round(HERO().dmgChute*(p.manobra==="baixo"?1.5:1)),CFG.KICK_KNOCKBACK,0.6,null,t,'chute');}}
       p.z=pulinhoManobra(p);
-      if(p.grindT>CFG.GRIND_MAX_MEIOFIO+(p.grindExtra||0)){endGrind(p,false);return;} // manobras dao mais tempo
+      if(!p.grindDegrau&&p.grindT>CFG.GRIND_MAX_MEIOFIO+(p.grindExtra||0)){endGrind(p,false);return;} // no degrau: slide por toda a borda
+      if(p.grindDegrau&&!degrauAtivo(degrauFase(),p.wx)){endGrind(p,false);return;}                     // acabou a borda: cai
     }
   }
   p.grindSparkT=(p.grindSparkT||0)-dt;
@@ -1581,13 +1653,14 @@ function camLimite(){
   return CUR_WORLD_LEN-W;}
 // capanga = membro da gangue do chefe da fase, com a roupa em outra cor (pele preservada pelo mkTint)
 const _capSets={};
-function capangaSet(pi){
-  if(_capSets[pi])return _capSets[pi];
+function capangaSet(pi,v){
+  v=v?1:0;const chave=pi+"_"+v;
+  if(_capSets[chave])return _capSets[chave];
   const ph=P.phases[pi],base=ph.tint||{};
   const cores=[[0.45,0.8,0.45],[0.95,0.8,0.3],[0.9,0.4,0.35]]; // verde, amarelo, vermelho do reggae
-  const t={shift:((base.shift||0)+140)%360,sat:(base.sat===undefined?1:base.sat)*0.9,val:(base.val===undefined?1:base.val)*0.82,neutro:cores[pi%3]};
+  const t={shift:((base.shift||0)+140)%360,sat:(base.sat===undefined?1:base.sat)*0.9,val:(base.val===undefined?1:base.val)*0.82,neutro:cores[(pi+v)%3]};
   const I=IMG.phases[pi];
-  return _capSets[pi]={bg:I.bg,port:I.port,idle:fset(ph.idle,t),guard:fset(ph.guard,t)||fset(ph.idle,t),attack:fset(ph.attack,t),
+  return _capSets[chave]={bg:I.bg,port:I.port,idle:fset(ph.idle,t),guard:fset(ph.guard,t)||fset(ph.idle,t),attack:fset(ph.attack,t),
     attack2:fset(ph.attack2,t)||fset(ph.attack,t),attack3:null,taunt:fset(ph.taunt,t)||fset(ph.idle,t),
     idleA:fsA(ph.idleA,t),walkA:fsA(ph.walkA,t),socoA:fsA(ph.socoA,t),chuteA:fsA(ph.chuteA,t),puloA:fsA(ph.puloA,t),danoA:fsA(ph.danoA,t),
     tauntA:null,mksA:null,victoryA:null,koPose:fset(ph.koPose,t),sizeMul:I.sizeMul};}
@@ -1624,8 +1697,8 @@ function novoCapanga(lado,vetPi){
       sizeMul:(IMG.phases[vetPi].sizeMul||1)*0.9,dmMul:0.85,dmgMul:0.7,cd:0.8+Math.random()*0.8,fireCd:1e9,vinilCd:1e9,grabCd:6+Math.random()*4,
       wx:lado>0?camX+W+90+Math.random()*80:camX-90-Math.random()*60,y:b.top+Math.random()*(b.bottom-b.top),facing:-lado});
     mooks.push(m);return;}
-  Object.assign(m,{mook:true,entered:false,nome:APELIDOS[(Math.random()*APELIDOS.length)|0],imgSet:capangaSet(pi),
-    sizeMul:(IMG.phases[pi].sizeMul||1)*0.88,dmMul:0.8,dmgMul:0.6,cd:0.8+Math.random()*0.8,fireCd:1e9,vinilCd:1e9,grabCd:6+Math.random()*4,
+  Object.assign(m,{mook:true,entered:false,nome:APELIDOS[(Math.random()*APELIDOS.length)|0],imgSet:capangaSet(pi,(Math.random()*2)|0),
+    sizeMul:(IMG.phases[pi].sizeMul||1)*(0.84+Math.random()*0.08),dmMul:0.8,dmgMul:0.6,cd:0.8+Math.random()*0.8,fireCd:1e9,vinilCd:1e9,grabCd:6+Math.random()*4,
     wx:lado>0?camX+W+90+Math.random()*80:camX-90-Math.random()*60,y:b.top+Math.random()*(b.bottom-b.top),facing:-lado});
   mooks.push(m);}
 function atacantes(e){let n=0;for(const o of alvos())if(o!==e&&(o.state==="windup"||o.state==="attack"))n++;return n;}
@@ -1650,7 +1723,7 @@ function atualizaOndas(dt){
   const L=alvos();
   for(let i=0;i<L.length;i++)for(let j=i+1;j<L.length;j++){const a=L[i],c=L[j];
     if(a.grabbed||c.grabbed)continue;
-    if(Math.abs(a.wx-c.wx)<55&&Math.abs(a.y-c.y)<16){const sg=(a.y<=c.y)?-1:1,b=curBand();
+    if(Math.abs(a.wx-c.wx)<55*kX()&&Math.abs(a.y-c.y)<16){const sg=(a.y<=c.y)?-1:1,b=curBand();
       a.y=Math.max(b.top,Math.min(b.bottom,a.y+sg*40*dt));c.y=Math.max(b.top,Math.min(b.bottom,c.y-sg*40*dt));}}
 }
 
@@ -1659,13 +1732,22 @@ function propUnder(wx,y){
   for(const pr of track){
     if(wx>pr.wx-pr.w*0.42&&wx<pr.wx+pr.w*0.42){
       // se y fornecido, so bloqueia se estiver na mesma faixa do prop
-      if(y!==undefined&&pr.y!==undefined&&!sameLane(y,pr.y))continue;
+      if(y!==undefined&&pr.y!==undefined&&Math.abs(y-pr.y)>CFG.PROP_PROF)continue; // ocupa so a propria faixa de profundidade
       return pr;
     }
   }
   return null;
 }
 // (removido: resolvePropsX era um placeholder morto e com bug de precedência)
+// BLOQUEIO NO EIXO Y: subir/descer na calcada nao atravessa banco, lixeira, caixa ou carro
+// (so passa por cima quem estiver alto o bastante: pulando ou em cima dele)
+function bloqueiaY(ent,prevY){
+  if(ent.y===prevY)return;
+  for(const pr of track){
+    if(!pr.solidTop||pr.exploded)continue;
+    if(Math.abs(ent.wx-pr.wx)>=pr.w*0.42)continue;
+    const dentro=Math.abs(ent.y-pr.y)<=CFG.PROP_PROF,antes=Math.abs(prevY-pr.y)<=CFG.PROP_PROF;
+    if(dentro&&!antes&&(ent.z||0)<pr.topH*0.55){ent.y=prevY;return;}}}
 function applyPropCollision(ent,dxWorld){
   // ent: player/enemy com {wx,y,z}
   const target=ent.wx+dxWorld;
@@ -1741,6 +1823,10 @@ function updatePlayer(dt){const p=player;
       if(alvo){p.dashHit=true;damageEnemy(18,340,0.5,null,alvo);}}
     if(p.dashT<=0)p.skating=false;p.anim+=dt;return;}
   if(p.guardT>0){p.guardT-=dt;if(p.guardT<=0){p.guarding=false;p.guardT=0;}}
+  // MC NO CHAO: sem controle ate levantar (o manche e os botoes voltam quando ele fica de pe)
+  if(p.downT>0){p.downT-=dt;if(p.kbx!==0){applyPropCollision(p,p.kbx*dt);p.kbx*=Math.pow(0.0001,dt);if(Math.abs(p.kbx)<6)p.kbx=0;}clampPlayerX(p);
+    press.punch=press.kick=press.jump=false;press.jumpTaps.length=0;p.state="idle";p.anim+=dt;
+    if(p.downT<=0){p.downT=0;addDmgNum(p.wx,p.y-200,"DE PÉ!",false,"#2ec27e");}return;}
   if(p.hurtT>0){p.hurtT-=dt;p.anim+=dt;press.punch=press.kick=false;p.bufPunchT=0;p.comboStep=0;
     if(p.grindMode){p.grindMode=null;p.grindTgt=null;p.grinding=false;p.__onProp=null;}
     if(p.throwTgt){p.throwTgt.grabbed=false;p.throwTgt=null;p.throwT=0;}return;}
@@ -1758,6 +1844,26 @@ function updatePlayer(dt){const p=player;
     return;
   }
   if(p.grindMode){updateGrind(p,dt);p.anim+=dt;return;}
+  // ===== AGARRAO: SEGURANDO O VILAO =====
+  if(p.segT>0){const t=p.throwTgt;
+    p.segT-=dt/GAME_SPEED;if(p.joelhaT>0)p.joelhaT-=dt;
+    if(!t||t.state==="dead"||!t.grabbed){p.segT=0;p.throwTgt=null;p.state="idle";}
+    else{
+      t.wx=p.wx+p.facing*38*kX();t.y=p.y;t.z=0;t.kbx=0;t.facing=-p.facing;
+      const ax=keys.ax||((keys.right?1:0)-(keys.left?1:0)),dirX=ax*p.facing;
+      if(press.kick){press.kick=false;iniciaArremesso(p,"frente");}
+      else if(press.punch){press.punch=false;
+        if(dirX<-0.5)iniciaArremesso(p,"tras");
+        else if(dirX>0.5)iniciaArremesso(p,"frente");
+        else if(p.joelhaT<=0){p.joelhadas++;p.joelhaT=0.13;tut.joelhada=true;
+          damageEnemy(Math.max(1,Math.round(HERO().dmgSoco*0.8)),1,0.6,null,t,'joelhada');
+          if(t.state!=="dead"){t.grabbed=true;t.state="hurt";t.hurtT=Math.max(t.hurtT,p.segT+CFG.THROW_T+0.3);}
+          AU.punch();shake=Math.max(shake,5);impactBurst(t.wx,t.y-110,"#fff2c0",false);
+          addDmgNum(t.wx,t.y-230,p.joelhadas+"ª JOELHADA",false,"#ffe36a");
+          if(p.joelhadas>=CFG.JOELHADAS_MAX)iniciaArremesso(p,"tras");}}
+      if(p.segT>0&&p.segT<=0.001)iniciaArremesso(p,"tras");
+      if(p.segT<0)iniciaArremesso(p,"tras");}
+    press.jump=false;press.jumpTaps.length=0;p.anim+=dt;return;}
   // ===== 🦵 CHUTE: golpe unico de afastamento (shuv-it). Nao entra em combo, nao derruba =====
   if(press.kick){press.kick=false;
     const noAr=(p.z>(p.__onProp?p.__onProp.topH:0)+1)||p.vz>0;
@@ -1785,14 +1891,16 @@ function updatePlayer(dt){const p=player;
   if(p.throwT>0){p.throwT-=dt;const t=p.throwTgt;
     if(t&&t.grabbed&&t.state!=="dead"){
       const k=Math.min(1,1-p.throwT/CFG.THROW_T);
-      t.wx=p.wx+p.facing*(40-110*k);t.y=p.y;t.z=110*Math.sin(Math.PI*Math.min(1,k*1.1));t.facing=-p.facing;t.kbx=0;}
+      if(p.throwDir==="frente"){t.wx=p.wx+p.facing*(40+70*k)*kX();t.z=60*Math.sin(Math.PI*Math.min(1,k));}
+      else{t.wx=p.wx+p.facing*(40-110*k)*kX();t.z=110*Math.sin(Math.PI*Math.min(1,k*1.1));}
+      t.y=p.y;t.facing=-p.facing;t.kbx=0;}
     if(p.throwT<=0){p.throwT=0;soltaArremesso(p);p.state="idle";}
     p.anim+=dt;return;}
   // ===== COMBO AUTOMATICO TERRESTRE (3 hits; o ultimo derruba) =====
   if(p.atkT>0){p.atkT-=dt;
     if(!p.atkHit&&p.atkT<0.20&&p.atkT>0.08){
       if(quebraVinis(p,HERO().reachSoco))p.atkHit=true;
-      if(bateNoCarro(p,CFG.PUNCH_RANGE_X))p.atkHit=true;
+      if(bateNoCarro(p,CFG.PUNCH_RANGE_X*kX()))p.atkHit=true;
       const alvo=alvoDoSoco(p);   // so conecta dentro do quadrante 50x15
       if(alvo){p.atkHit=true;p.lastComboHit=performance.now();
         if(p.atkFinisher){
@@ -1803,7 +1911,7 @@ function updatePlayer(dt){const p=player;
           // hits 1 e 2: empurrao minimo pro vilao continuar dentro dos 50px do soco,
           // e o MC da meio passo a frente (igual Final Fight) pro combo fechar
           damageEnemy(HERO().dmgSoco,30,0.40,"combo",alvo,'soco');
-          if(Math.abs(alvo.wx-p.wx)>CFG.PUNCH_RANGE_X*0.6)applyPropCollision(p,p.facing*8);}}
+          if(Math.abs(alvo.wx-p.wx)>CFG.PUNCH_RANGE_X*kX()*0.6)applyPropCollision(p,p.facing*8);}}
       else if(p.atkHit&&!alvo)p.lastComboHit=performance.now(); // acertou disco/carro: combo segue
     }
     if(p.atkT<=0){
@@ -1825,6 +1933,7 @@ function updatePlayer(dt){const p=player;
       if(alvo){p.kickHit=true;damageEnemy(HERO().dmgChute,CFG.KICK_KNOCKBACK,0.30,null,alvo,'chute');}}
     if(p.kickT<=0)p.state="idle";
     p.anim+=dt;return;}
+  const _py0=p.y; // pra saber se estava subindo ou descendo no degrau
   let ax=keys.ax||0,ay=keys.ay||0;
   if(!ax&&!ay){ax=(keys.right?1:0)-(keys.left?1:0);ay=(keys.down?1:0)-(keys.up?1:0);}
   const amag=Math.hypot(ax,ay);if(amag>1){ax/=amag;ay/=amag;}
@@ -1869,13 +1978,14 @@ function updatePlayer(dt){const p=player;
       if(dx!==0&&CFG.ESCAPE_STEER){const tgt=dx*CFG.ESCAPE_VX;
         p.mvx+=Math.max(-ACCEL*1.6*dt,Math.min(ACCEL*1.6*dt,tgt-p.mvx));}
     }else if(!p.airAtk){ // voadora segue em linha reta
-      const tgt=ax*330*0.85*HERO().spd;
+      const tgt=ax*330*0.85*HERO().spd*(CFG.VEL_MUL||1.4);
       p.mvx+=Math.max(-ACCEL*dt,Math.min(ACCEL*dt,tgt-p.mvx));
     }
     applyPropCollision(p,p.mvx*dt);
   }else{
     p.jumpsUsed=0;p.escaping=false; // pisando no chao: pulo sempre liberado
-    const tgtX=ax*330*sc*HERO().spd,tgtY=ay*235*sc*HERO().spd; // subir/descer a calcada mais agil
+    const vm=CFG.VEL_MUL||1.4; // personagem maior anda proporcionalmente mais rapido
+    const tgtX=ax*330*sc*HERO().spd*vm,tgtY=ay*235*sc*HERO().spd*vm; // subir/descer a calcada mais agil
     const acX=Math.abs(ax)>0.05?ACCEL:FRIC, acY=Math.abs(ay)>0.05?ACCEL:FRIC;
     p.mvx+=Math.max(-acX*dt,Math.min(acX*dt,tgtX-p.mvx));
     p.mvy+=Math.max(-acY*dt,Math.min(acY*dt,tgtY-p.mvy));
@@ -1884,12 +1994,16 @@ function updatePlayer(dt){const p=player;
     if(dx||dy){if(p.state!=="land")p.state="run";}else if(p.state==="run"&&!moving)p.state="idle";
   }
   clampPlayerX(p);{const b=curBand();p.y=Math.max(b.top,Math.min(b.bottom,p.y));}
+  bloqueiaY(p,_py0);
+  aplicaDegrau(p,_py0,false);
+  {const dg=degrauFase();if(dg){const dz=(dg.yRua-dg.yPlat)/kZ();   // no ar, manche pra CIMA encostado no degrau: sobe
+    if(degrauAtivo(dg,p.wx)&&Math.abs(p.y-dg.yRua)<2&&ay<-0.35&&p.z>=dz+2){p.y=dg.yPlat;p.z-=dz;}}}
   // ---- ATAQUE AEREO: manobra de skate (X) e soco/chute no ar acertam ----
   // ATERRISSAGEM NA CABECA: descendo (vz<0) em cima de um vilao/boss = dano.
   // Cada queda em cima conta um acerto novo (airHit e rearmado a cada pulo).
   if(p.z>0&&p.vz<0&&(p.skating||p.airAtk)&&!p.stompHit){
     const h=HERO();
-    const vit=alvos().find(t=>t.state!=="dead"&&Math.abs(t.wx-p.wx)<h.reachAr*0.9&&Math.abs(t.y-p.y)<h.depthAr&&sameLane(p.y,t.y));
+    const vit=alvos().find(t=>t.state!=="dead"&&Math.abs(t.wx-p.wx)<h.reachAr*kX()*0.9&&Math.abs(t.y-p.y)<h.depthAr&&sameLane(p.y,t.y));
     if(vit&&held.kick&&p.skating){startGrind(p,"cabeca",vit);p.anim+=dt;return;}
     if(vit){
       p.stompHit=true;p.airHit=true;
@@ -1905,7 +2019,7 @@ function updatePlayer(dt){const p=player;
     if(!p.airHit)quebraVinis(p,h.reachAr);
     if(!p.airHit&&bateNoCarro(p,h.reachAr))p.airHit=true;
     if(p.airNextT>0)p.airNextT-=dt;
-    const alvo=!p.airHit&&!(p.airNextT>0)&&alvos().find(t=>Math.abs(t.wx-p.wx)<h.reachAr&&Math.abs(t.y-p.y)<h.depthAr);
+    const alvo=!p.airHit&&!(p.airNextT>0)&&alvos().find(t=>Math.abs(t.wx-p.wx)<h.reachAr*kX()&&Math.abs(t.y-p.y)<h.depthAr);
     if(alvo){p.airHit=true;
       const decMul=Math.max(0.5,1-0.2*(p.airComboN||0));p.airComboN=(p.airComboN||0)+1;
       const dmgA=Math.max(1,Math.round(h.dmgAr*decMul));
@@ -1923,7 +2037,9 @@ function updatePlayer(dt){const p=player;
   // SLIDE EM BANCO/CARRO: caindo com 🦵 segurado por cima de superficie grindavel = encaixa no slide
   if(held.kick&&p.skating&&p.vz<=0&&p.z>0){
     for(const pr of track){if(!pr.grind||pr.exploded)continue;
-      if(Math.abs(p.wx-pr.wx)<pr.w*0.45&&sameLane(p.y,pr.y)&&p.z>=pr.topH-10&&p.z<=pr.topH+80){startGrind(p,"prop",pr);p.anim+=dt;return;}}}
+      // banco: vindo por TRAS (profundidade menor que o banco) = encosto; pela FRENTE = assento
+      const nivel=(pr.topH2&&p.y<pr.y-4&&p.z>=pr.topH2-12)?pr.topH2:pr.topH;
+      if(Math.abs(p.wx-pr.wx)<pr.w*0.45&&Math.abs(p.y-pr.y)<=CFG.PROP_PROF*1.6&&p.z>=nivel-10&&p.z<=nivel+80){p.grindZ=nivel;startGrind(p,"prop",pr);p.anim+=dt;return;}}}
   const noAr=(p.z>0||p.vz!==0);   // recalculado AGORA (o pisao pode ter mudado vz)
   if(noAr){p.z+=p.vz*dt;p.vz-=2000*dt;
     const floorZ=p.__onProp?p.__onProp.topH:0;
@@ -2069,6 +2185,7 @@ function updateEnemy(dt,ent){const e=ent||enemy,p=player;if(e.state==="espera")r
   }
   const furyMul=(isBossHere&&e.enraged)?1.35:(isBossHere&&e.furyStage1)?1.15:1;
   if(e.flashT>0)e.flashT-=dt;
+  if(e.deitadoT>0)e.deitadoT-=dt;if(e.getupT>0)e.getupT-=dt;
   if(e.grabbed){e.kbx=0;e.vz=0;e.anim+=dt;return;} // preso no agarrao do MC
   // ARREMESSADO vira projetil: derruba quem estiver no caminho (Final Fight)
   if(e.flyT>0){e.flyT-=dt;
@@ -2079,7 +2196,9 @@ function updateEnemy(dt,ent){const e=ent||enemy,p=player;if(e.state==="espera")r
   if(e.z>0||e.vz!==0){
     e.z+=e.vz*dt;e.vz-=2000*dt;
     const floorZ=e.__onProp?e.__onProp.topH:0;
-    if(e.z<=floorZ&&e.vz<=0){e.z=floorZ;e.vz=0;}
+    if(e.z<=floorZ&&e.vz<=0){e.z=floorZ;e.vz=0;
+      if(e.derrubado&&e.state!=="dead"){e.derrubado=false;e.deitadoT=CFG.DEITADO_T;e.getupT=CFG.DEITADO_T+CFG.LEVANTA_INVULN;
+        e.state="hurt";e.hurtT=Math.max(e.hurtT||0,CFG.DEITADO_T+0.15);shake=Math.max(shake,5);}}
   }
   // DEFESA IA: chance aleatória ao receber ataque perto
   if(e.guardT>0){e.guardT-=dt;if(e.guardT<=0){e.guarding=false;e.guardT=0;}}
@@ -2157,7 +2276,7 @@ function updateEnemy(dt,ent){const e=ent||enemy,p=player;if(e.state==="espera")r
   if(e.state==="approach"){const dx=p.wx-e.wx,dy=p.y-e.y;
     e.esperaVez=!!e.mook&&atacantes(e)>=CFG.MAX_ATACANTES; // no maximo N batendo ao mesmo tempo
     if(tentaSequencia(e,dx))return;
-    if(Math.abs(dx)<=CFG.ENEMY_HIT_X-5&&Math.abs(dy)<=CFG.ENEMY_ATK_Y&&e.cd<=0&&e.entered!==false&&!e.esperaVez){
+    if(Math.abs(dx)<=(CFG.ENEMY_HIT_X-5)*kX()&&Math.abs(dy)<=CFG.ENEMY_ATK_Y&&e.cd<=0&&e.entered!==false&&!e.esperaVez){
       const isBossFight=(e===enemy && P.phases[e.pi] && P.phases[e.pi].chefe);
       e.state="windup";
       // AGARRAO: opcao rara de golpe imbloqueavel, com cooldown proprio (e.grabCd).
@@ -2183,7 +2302,7 @@ function updateEnemy(dt,ent){const e=ent||enemy,p=player;if(e.state==="espera")r
         rings.push({wx:e.wx,y:e.y-60,r:14,t:e.windT+0.1,c:"#5599ff"});
       }
     }
-    else{let sp=150*dm*furyMul;
+    else{let sp=150*dm*furyMul*(CFG.VEL_MUL_VILAO||1.3);
       if(e.mook)sp=Math.max(sp,175);          // capanga nunca anda em camera lenta
       if(e.entered===false)sp=Math.max(sp,280); // entrando pela borda: chega logo na tela
       // ZIGUEZAGUE 2.5D: longe, aproxima pela diagonal alternando flanco (cima/baixo da calcada);
@@ -2194,14 +2313,14 @@ function updateEnemy(dt,ent){const e=ent||enemy,p=player;if(e.state==="espera")r
       const ty=far?Math.max(b.top,Math.min(b.bottom,p.y+e.flankSide*amp)):p.y;
       if(e.esperaVez){ // aguardando a vez: cerca a uns 200px, sem colar
         const d=Math.abs(dx);
-        if(d>230)applyPropCollision(e,Math.sign(dx)*sp*dt);
-        else if(d<170)applyPropCollision(e,-Math.sign(dx)*sp*0.6*dt);
-      }else if(Math.abs(dx)>CFG.ENEMY_STOP_DIST){ // para dentro do alcance do soco do MC
+        if(d>230*kX())applyPropCollision(e,Math.sign(dx)*sp*dt);
+        else if(d<170*kX())applyPropCollision(e,-Math.sign(dx)*sp*0.6*dt);
+      }else if(Math.abs(dx)>CFG.ENEMY_STOP_DIST*kX()){ // para dentro do alcance do soco do MC
         const ahead=propUnder(e.wx+Math.sign(dx)*90,e.y);
         if(ahead&&ahead.solidTop&&e.z<=0&&e.vz===0)e.vz=620;
         applyPropCollision(e,Math.sign(dx)*sp*dt);
       }
-      {const dyT=ty-e.y;e.y+=Math.sign(dyT)*Math.min(Math.abs(dyT),sp*0.8*dt);e.y=Math.max(b.top,Math.min(b.bottom,e.y));}}}
+      {const py0=e.y,dyT=ty-e.y;e.y+=Math.sign(dyT)*Math.min(Math.abs(dyT),sp*0.8*dt);e.y=Math.max(b.top,Math.min(b.bottom,e.y));bloqueiaY(e,py0);aplicaDegrau(e,py0,true,p.y);}}}
   else if(e.state==="windup"){e.windT-=dt;if(e.windT<=0){e.state="attack";e.atkT=0.32;e.atkHit=false;}}
   else if(e.state==="attack"){e.atkT-=dt;
     if(!e.atkHit&&e.atkT<0.22&&e.atkT>0.08){
@@ -2333,7 +2452,11 @@ function cyc(arr,i){if(!arr||!arr.length)return null;return arr[((Math.floor(i)%
 function mcFrame(){const p=player,S=HIMG(),F=CFG.FPS||{};
   const has=a=>a&&a.length;
   if(p.hurtT>0&&has(S.dano))return S.dano[Math.min(S.dano.length-1,p.hurtT>0.16?0:1)];
-  if(p.throwT>0)return has(S.throw)?seqFrame(S.throw,1-p.throwT/CFG.THROW_T):skIdx();          // agarrao
+  if(p.segT>0){const f=S.throw;return has(f)?(p.joelhaT>0?f[Math.min(1,f.length-1)]:f[0]):skIdx();} // segurando / joelhada
+  if(p.throwT>0){const f=S.throw;if(!has(f))return skIdx();                                    // arremesso
+    const sub=p.throwDir==="frente"?[f[Math.min(1,f.length-1)],f[f.length-1]]:f.slice(Math.min(2,f.length-1));
+    return seqFrame(sub,1-p.throwT/CFG.THROW_T);}
+  if(p.downT>0&&has(S.dano))return S.dano[S.dano.length-1];                                  // no chao
   if(p.grindMode){const q=p.manobra&&MANOBRAS[p.manobra]?S[MANOBRAS[p.manobra].quadro]:null;   // pose da manobra
     if(has(q))return cyc(q,p.skAnim*(F.slide||12));
     return has(S.slide)?cyc(S.slide,p.skAnim*(F.slide||12)):skIdx();}                         // slide
@@ -2403,7 +2526,7 @@ function drawAlinhamento(){
     if(Math.abs(dx)>320)continue;
     if(ady>CFG.PUNCH_RANGE_Y){
       // perto em X mas desalinhado: candidato a seta de subir/descer
-      if(Math.abs(dx)<=CFG.PUNCH_RANGE_X+40&&ady<=70&&Math.abs(dx)<setaDist){setaDist=Math.abs(dx);setaDir=Math.sign(t.y-p.y);}
+      if(Math.abs(dx)<=(CFG.PUNCH_RANGE_X+40)*kX()&&ady<=70&&Math.abs(dx)<setaDist){setaDist=Math.abs(dx);setaDir=Math.sign(t.y-p.y);}
       continue;}
     const acerta=noQuadranteDoSoco(p,t);
     const sx=screenX(t.wx),sc=dscale(t.y),rx=44*sc*(t.sizeMul||1),ry=12*sc;
@@ -2429,19 +2552,50 @@ function drawPlayerActor(){const p=player;
 function drawShadow(sx,y,sc,z){const w=112*sc*(1-Math.min(z/260,0.4));cx.save();
   cx.globalAlpha=0.32*(1-Math.min(z/300,0.6));cx.fillStyle="#000";cx.beginPath();
   cx.ellipse(sx,y,w*0.5,14*sc,0,0,6.283);cx.fill();cx.restore();}
-const CHAR_SCALE=0.80; // reduz o tamanho visual dos personagens pra melhor visão de jogo
+// TAMANHO DOS PERSONAGENS na tela (Admin → Controles → Escala dos personagens). 0.80 era pequeno demais pro cenario.
+function escalaChar(){return CFG.ESCALA_PERSONAGENS||1.7;}
+// distancias horizontais de golpe acompanham o tamanho na tela (valores do Admin valem pra escala 0.8 original)
+function kX(){return escalaChar()/0.8;}
+// altura na tela (pulo, voadora, fuga, props): mesmo tempo de pulo, desenho mais alto
+function kZ(){return CFG.ESCALA_ALTURA||1.6;}
 function drawActor(a,fr,z,dead){if(!fr||!fr.img)return;
   const porte=(a&&a.sizeMul!==undefined)?a.sizeMul:((a&&a.pi!==undefined&&IMG.phases[a.pi])?(IMG.phases[a.pi].sizeMul||1):1);
-  const sc=dscale(a.y)*CHAR_SCALE*porte,dw=fr.w*sc,dh=fr.h*sc,sx=screenX(a.wx),dx=sx-dw/2,dy=(a.y-z)-dh;
+  z=(z||0)*kZ();
+  const sc=dscale(a.y)*escalaChar()*porte,dw=fr.w*sc,dh=fr.h*sc,sx=screenX(a.wx),dx=sx-dw/2,dy=(a.y-z)-dh;
   drawShadow(sx,a.y,sc,z);cx.save();
+  const deitado=(a.downT>0)||(a.deitadoT>0&&a.state!=="dead");
+  {const agora=performance.now(),zAnt=a._pz||0;
+    if(zAnt>6&&z<=0)a._sqT=agora;                       // acabou de pousar
+    const subindo=z>zAnt+0.5;a._pz=z;
+    if(!deitado&&!dead){let kx=1,ky=1;const d=a._sqT?(agora-a._sqT)/150:1;
+      if(d<1){const f=(1-d)*(1-d);kx=1+0.143*f;ky=1-0.143*f;}
+      else if(subindo){kx=0.945;ky=1.066;}
+      if(kx!==1){cx.translate(sx,a.y-z);cx.scale(kx,ky);cx.translate(-sx,-(a.y-z));}}}
+  if(deitado){cx.translate(sx,a.y);cx.rotate(-Math.PI/2*(a.facing<0?-1:1));cx.translate(-sx,-a.y+dw*0.18);}
+  else if((a.getupT>0||(a===player&&a.isInvincible&&!a.escaping))&&(performance.now()%140)<70)cx.globalAlpha=0.45;
   if(a.facing<0){cx.translate(sx,0);cx.scale(-1,1);cx.translate(-sx,0);}
   if(dead)cx.globalAlpha=Math.max(0.15,a.deadT/1.4);
   if(fr.img.ok){try{cx.drawImage(fr.img,dx,dy,dw,dh);}catch(e){}}else{cx.fillStyle="#c0392b";cx.fillRect(dx,dy,dw,dh);}
   if(a.flashT>0){const fl=flashOf(fr);if(fl){cx.globalAlpha=Math.min(1,a.flashT/0.14);cx.drawImage(fl,dx,dy,dw,dh);}}
   cx.restore();}
 // banco de praca desenhado no codigo (ferro verde + ripas de madeira), sem arte externa
+// PROPS COM ARTE (assets/props): banco, caixa de som e lixeira desenhados pela IA.
+// A altura na tela segue a altura de colisao (topH), entao subir/dar slide bate com o desenho.
+function drawPropImg(pr,sx,im,alturaTela,ratioTopo){
+  const H=alturaTela/ratioTopo,Wd=H*(im.naturalWidth||im.width)/(im.naturalHeight||im.height);
+  const tilt=pr.dmg>=2?0.05:0;
+  drawShadow(sx,pr.y,Wd/120,0);
+  cx.save();cx.translate(sx,pr.y);cx.rotate(tilt);cx.translate(-sx,-pr.y);
+  if(pr.flashT>0&&"filter" in cx)cx.filter="brightness(2.6)";
+  try{cx.drawImage(im,sx-Wd/2,pr.y-H,Wd,H);}catch(e){}
+  cx.filter="none";
+  if(pr.dmg>=1){const x0=sx-Wd/2,top=pr.y-H;cx.strokeStyle="rgba(255,255,255,.6)";cx.lineWidth=2;cx.beginPath();
+    cx.moveTo(x0+Wd*0.3,top+H*0.2);cx.lineTo(x0+Wd*0.45,top+H*0.45);cx.lineTo(x0+Wd*0.38,top+H*0.7);
+    if(pr.dmg>=2){cx.moveTo(x0+Wd*0.7,top+H*0.3);cx.lineTo(x0+Wd*0.58,top+H*0.55);cx.lineTo(x0+Wd*0.68,top+H*0.9);}cx.stroke();}
+  cx.restore();}
 function drawBanco(pr,sx,sc){
-  const w=pr.w*sc,top=pr.y-pr.topH,x0=sx-w/2,ferro="#1f5a3a",ferroL="#2f7a52",mad="#8a5a2b",madL="#b07a40";
+  {const im=IMG.props.banco;if(im&&im.img&&im.img.ok){drawPropImg(pr,sx,im.img,pr.topH*kZ(),0.5);return;}} // assento = metade da altura do desenho
+  const w=pr.w*sc,top=pr.y-pr.topH*kZ(),x0=sx-w/2,ferro="#1f5a3a",ferroL="#2f7a52",mad="#8a5a2b",madL="#b07a40";
   drawShadow(sx,pr.y,sc*1.6,0);
   cx.save();
   cx.fillStyle=ferro;cx.fillRect(x0+w*0.08,top,7*sc,pr.y-top);cx.fillRect(x0+w*0.92-7*sc,top,7*sc,pr.y-top);
@@ -2453,7 +2607,9 @@ function drawBanco(pr,sx,sc){
   cx.fillStyle=ferroL;cx.fillRect(x0-2*sc,top-10*sc,8*sc,16*sc);cx.fillRect(x0+w-6*sc,top-10*sc,8*sc,16*sc);
   cx.restore();}
 function drawObst(pr,sx,sc){
-  const w=pr.w*sc,top=pr.y-pr.topH,x0=sx-w/2,h=pr.topH,tilt=pr.dmg>=2?0.05:0;
+  {const im=pr.type==="caixa"?IMG.props.caixaSom:IMG.props.lixeira;
+   if(im&&im.img&&im.img.ok){drawPropImg(pr,sx,im.img,pr.topH*kZ(),pr.type==="caixa"?0.95:0.98);return;}}
+  const w=pr.w*sc,top=pr.y-pr.topH*kZ(),x0=sx-w/2,h=pr.topH*kZ(),tilt=pr.dmg>=2?0.05:0;
   drawShadow(sx,pr.y,sc*(pr.w/110),0);
   cx.save();cx.translate(sx,pr.y);cx.rotate(tilt);cx.translate(-sx,-pr.y);
   if(pr.type==="caixa"){ // caixa de som do sound system
@@ -2569,6 +2725,7 @@ function drawCombatHUD(dt){const ph=P.phases[enemy.pi];
   const pct=Math.max(0,Math.min(1,camX/Math.max(1,CUR_WORLD_LEN-W)));
   cx.fillStyle="#000";cx.fillRect(W/2-90,72,180,6);cx.fillStyle=ph.accent;cx.fillRect(W/2-90,72,180*pct,6);
   const alvoH=(hudAlvo&&hudAlvo.mook&&mooks.includes(hudAlvo))?hudAlvo:(bossSpawned?enemy:null);
+  cx.save();cx.translate(-HUD_R,0);
   if(alvoH&&alvoH.mook){
     bar(W-30,14,300,14,Math.max(0,alvoH.hp/alvoH.maxhp),"#c0392b","#ff7a5a","r");
     if(alvoH.vet){const pt=IMG.phases[alvoH.pi].port;cx.fillStyle="#1a1414";cx.fillRect(W-384,8,46,46);
@@ -2580,7 +2737,102 @@ function drawCombatHUD(dt){const ph=P.phases[enemy.pi];
     if(IMG.phases[enemy.pi].port.ok)try{cx.drawImage(IMG.phases[enemy.pi].port,W-75,13,52,52);}catch(e){}
     bar(W-90,14,360,16,Math.max(0,enemy.hp/enemy.maxhp),"#c0392b","#ff7a5a","r");
     cx.textAlign="right";cx.fillStyle=ph.accent;cx.font='14px "Press Start 2P",monospace';cx.fillText(ph.name,W-90,44);}
+  cx.restore();
   cx.textAlign="left";cx.textBaseline="alphabetic";}
+// JUNTAS DA CALCADA andando 1:1 com a camera: "prende" carro, bancos e caixas no chao,
+// que agora se movem junto com o piso (e com os postes), em vez de deslizar sobre a pintura parada.
+// Nao desenha em fundo panoramico (esse ja rola junto).
+function drawPisoRolando(){
+  const a=CFG.PISO_OPACIDADE;if(!a)return;
+  const ph=IMG.phases[enemy.pi];if(ph&&ph.bg&&ph.bg.ok){const nw=ph.bg.naturalWidth||1,nh=ph.bg.naturalHeight||1;if(nw/nh>=2.2)return;}
+  const b=curBand(),top=b.top-6,bot=Math.min(H,b.bottom+40),esp=CFG.PISO_ESP||140;
+  cx.save();
+  const fundo=cx.createLinearGradient(0,top,0,bot);fundo.addColorStop(0,"rgba(0,0,0,0)");fundo.addColorStop(1,"rgba(0,0,0,"+(a*0.9)+")");
+  cx.fillStyle=fundo;cx.fillRect(0,top,W,bot-top);
+  // linhas no sentido da rua (profundidade)
+  cx.strokeStyle="rgba(0,0,0,"+a+")";cx.lineWidth=2;
+  for(const f of [0.33,0.66]){const y=top+(bot-top)*f;cx.beginPath();cx.moveTo(0,y);cx.lineTo(W,y);cx.stroke();}
+  // juntas transversais: andam com o chao e abrem em perspectiva (mais largas perto da tela)
+  const first=Math.floor(camX/esp)-1;
+  for(let i=first;i<first+Math.ceil(W/esp)+3;i++){
+    const xm=i*esp-camX,xt=W/2+(xm-W/2)*0.72,xb=W/2+(xm-W/2)*1.18;
+    cx.strokeStyle="rgba(0,0,0,"+a+")";cx.beginPath();cx.moveTo(xt,top);cx.lineTo(xb,bot);cx.stroke();
+    cx.strokeStyle="rgba(255,255,255,"+(a*0.45)+")";cx.beginPath();cx.moveTo(xt+2,top);cx.lineTo(xb+2,bot);cx.stroke();}
+  cx.restore();}
+// CARRO ESTACIONADO NO FUNDO: parte do cenario, anda so CARRO_PARALLAX (10%) do movimento do chao,
+// como um objeto longe. So aparece nas fases de CARRO_FASES (rua); dentro de museu/estudio nao.
+function drawCarroFundo(){
+  if(!CFG.UNO_NA_FASE||!IMG.props.uno)return;
+  const fases=CFG.CARRO_FASES||[0];if(fases.indexOf(enemy.pi)<0||ehPanorama(enemy.pi))return;
+  const st=IMG.props.uno.stages[0];if(!st||!st.img||!st.img.ok)return;
+  const b=curBand(),sc=CFG.CARRO_FUNDO_ESCALA||0.32,w=st.w*sc,h=st.h*sc;
+  const x=W*0.62-camX*(CFG.CARRO_PARALLAX||0.1),y=b.top+4;
+  if(x+w<0||x>W)return;
+  cx.save();cx.globalAlpha=0.96;
+  cx.fillStyle="rgba(0,0,0,.28)";cx.beginPath();cx.ellipse(x+w/2,y-2,w*0.46,h*0.07,0,0,6.283);cx.fill();
+  try{cx.drawImage(st.img,x,y-h,w,h);}catch(e){}
+  cx.restore();}
+// =====================================================================
+// POSTES NAS EMENDAS DOS CENARIOS (foto recortada, assets/props/poste.webp)
+// Um poste em cada emenda entre os quadros do cenario longo: esconde a costura e
+// fica preso no cenario (anda 1:1). Luz da lampada evidenciada: halo, cone ate o
+// chao e poca de luz/reflexo no piso - quem passa embaixo fica iluminado.
+// Sorteio por fase: as vezes 1 poste com defeito (pisca e solta faisca), as vezes nenhum.
+// =====================================================================
+const POSTE_EIXO=0.30,POSTE_LAMP_X=0.887,POSTE_LAMP_Y=0.049; // eixo do poste e lampada na imagem
+let postes=[],faiscas=[],_posteT=performance.now();
+function montaPostes(){
+  const ph=P.phases[phaseIndex]||{},em=ph.emendas||[];
+  postes=em.map(x=>({x,defeito:false,aceso:true,t:0}));faiscas=[];
+  if(postes.length&&Math.random()<CFG.POSTE_DEFEITO_CHANCE)postes[(Math.random()*postes.length)|0].defeito=true;}
+function geometriaPoste(p){
+  const im=IMG.props.poste,b=curBand(),base=b.top+2;
+  // lampada sempre abaixo do placar (HUD ocupa o topo da tela)
+  const Hp=Math.min(CFG.POSTE_ALTURA,(base-125)/(1-POSTE_LAMP_Y)),Wp=Hp*(im.w/im.h);
+  const x0=screenX(p.x)-POSTE_EIXO*Wp,top=base-Hp;
+  return {im,Wp,Hp,x0,top,base,lx:x0+POSTE_LAMP_X*Wp,ly:top+POSTE_LAMP_Y*Hp,chao:(b.top+b.bottom)/2};}
+function atualizaDefeito(p,dt){
+  if(!p.defeito)return;
+  p.t-=dt;if(p.t>0)return;
+  if(p.aceso){p.aceso=false;p.t=0.04+Math.random()*0.22;}
+  else{p.aceso=true;p.t=0.08+Math.random()*(Math.random()<0.3?1.6:0.35);
+    if(Math.random()<0.35){const g=geometriaPoste(p);             // faisca ao religar
+      for(let i=0;i<14;i++)faiscas.push({x:g.lx+(Math.random()-.5)*10,y:g.ly+8,vx:(Math.random()-.5)*160,vy:-40-Math.random()*120,t:0.9+Math.random()*0.6,chao:g.chao,q:0});}}}
+function drawPostesEmenda(antes){
+  const im=IMG.props.poste;if(!postes.length||!im||!im.img||!im.img.ok)return;
+  const now=performance.now(),dt=Math.min(0.05,(now-_posteT)/1000);if(antes)_posteT=now;
+  const forca=CFG.POSTE_LUZ;
+  for(const p of postes){
+    const g=geometriaPoste(p);if(g.x0>W+300||g.x0+g.Wp<-300)continue;
+    if(antes){
+      atualizaDefeito(p,dt);
+      try{cx.drawImage(im.img,g.x0,g.top,g.Wp,g.Hp);}catch(e){}
+      if(!p.aceso){cx.save();cx.fillStyle="rgba(20,18,16,.72)";cx.beginPath();cx.ellipse(g.lx,g.ly,g.Wp*0.12,g.Hp*0.018,0,0,6.283);cx.fill();cx.restore();continue;}
+      cx.save();cx.globalCompositeOperation="lighter";
+      const h=cx.createRadialGradient(g.lx,g.ly,2,g.lx,g.ly,110);           // halo forte da lampada
+      h.addColorStop(0,"rgba(255,236,180,"+(0.95*forca)+")");h.addColorStop(0.25,"rgba(255,196,110,"+(0.45*forca)+")");h.addColorStop(1,"rgba(255,170,80,0)");
+      cx.fillStyle=h;cx.fillRect(g.lx-110,g.ly-110,220,220);cx.restore();
+    }else{
+      if(!p.aceso)continue;
+      cx.save();cx.globalCompositeOperation="lighter";
+      // cone de luz ate o chao
+      const topo=g.ly+6,chao=g.chao,lar=CFG.POSTE_CONE;
+      const cg=cx.createLinearGradient(0,topo,0,chao);cg.addColorStop(0,"rgba(255,205,120,"+(0.42*forca)+")");cg.addColorStop(1,"rgba(255,190,100,"+(0.06*forca)+")");
+      cx.fillStyle=cg;cx.beginPath();cx.moveTo(g.lx-10,topo);cx.lineTo(g.lx+10,topo);cx.lineTo(g.lx+lar/2,chao);cx.lineTo(g.lx-lar/2,chao);cx.closePath();cx.fill();
+      // poca de luz no chao + reflexo no piso molhado
+      const pg=cx.createRadialGradient(g.lx,chao,4,g.lx,chao,lar*0.62);pg.addColorStop(0,"rgba(255,210,130,"+(0.48*forca)+")");pg.addColorStop(1,"rgba(255,190,100,0)");
+      cx.fillStyle=pg;cx.save();cx.translate(g.lx,chao);cx.scale(1,0.28);cx.translate(-g.lx,-chao);cx.beginPath();cx.arc(g.lx,chao,lar*0.62,0,6.283);cx.fill();cx.restore();
+      const rg=cx.createLinearGradient(0,chao,0,chao+130);rg.addColorStop(0,"rgba(255,215,140,"+(0.22*forca)+")");rg.addColorStop(1,"rgba(255,215,140,0)");
+      cx.fillStyle=rg;cx.fillRect(g.lx-14,chao,28,130);
+      cx.restore();}
+  }
+  if(!antes&&faiscas.length){  // faiscas caem, quicam no chao e apagam
+    cx.save();cx.globalCompositeOperation="lighter";
+    for(const f of faiscas){f.t-=dt;f.vy+=520*dt;f.x+=f.vx*dt;f.y+=f.vy*dt;
+      if(f.y>f.chao&&f.q<1){f.y=f.chao;f.vy*=-0.35;f.vx*=0.6;f.q++;}
+      const a=Math.max(0,Math.min(1,f.t));cx.fillStyle="rgba(255,"+(200+((f.t*80)|0)%55)+",120,"+a+")";cx.fillRect(f.x-2,f.y-2,4,4);}
+    faiscas=faiscas.filter(f=>f.t>0);cx.restore();}
+}
 function drawPhaseBg(){const ph=IMG.phases[enemy.pi];
   if(ph.bg.ok){try{
     // PARALLAX AUTOMATICO DE FUNDO (vale pra TODAS as fases, sem precisar de arte nova):
@@ -2589,7 +2841,12 @@ function drawPhaseBg(){const ph=IMG.phases[enemy.pi];
     // nitidez nenhuma; so fases longas com pouca resolucao de fundo usam zoom de verdade.
     const natW=ph.bg.naturalWidth||ph.bg.width||W, natH=ph.bg.naturalHeight||ph.bg.height||H;
     const maxCam=Math.max(1,CUR_WORLD_LEN-W);
-    const sw=natW/Math.max(1,CFG.BG_ZOOM||1.3); // zoom fixo: fundo desliza devagar (parallax) enquanto o chao anda 1:1
+    // FUNDO PANORAMICO (imagem bem mais larga que alta, ex. 5000x720): rola JUNTO com o chao,
+    // igual Final Fight - postes, carro e bancos ficam presos no cenario. Emenda em loop se acabar.
+    if(natW/natH>=2.2){const esc=H/natH,largura=natW*esc,off=((camX*(CFG.BG_PANORAMA_VEL||1))%largura+largura)%largura;
+      for(let x=-off;x<W;x+=largura)cx.drawImage(ph.bg,0,0,natW,natH,x,0,largura,H);
+      return;}
+    const sw=natW/Math.max(1,CFG.BG_ZOOM||1.3); // fundo de 1 tela: zoom fixo e desliza devagar (parallax)
     // CROP SO NA HORIZONTAL: recortar tambem a vertical desalinhava o chao/calcada
     // com o bandTop/bandBottom calibrado de cada fase (personagem flutuando).
     const camPct=Math.max(0,Math.min(1,camX/maxCam));
@@ -2601,6 +2858,9 @@ function drawPhaseBg(){const ph=IMG.phases[enemy.pi];
 function drawPhase(dt){drawPhaseBg();
   cx.save();if(shake>0)cx.translate((Math.random()-.5)*shake,(Math.random()-.5)*shake);
   drawAlinhamento();
+  drawCarroFundo();
+  drawPostesEmenda(true);   // poste + brilho da lampada (atras dos personagens)
+  drawPisoRolando();
   // PROFUNDIDADE 2.5D: props, MC, chefe, invasor e capangas ordenados pelo Y da calcada
   const L=[];
   for(const pr of track)L.push([pr.y,"pr",pr]);
@@ -2616,11 +2876,15 @@ function drawPhase(dt){drawPhaseBg();
     else if(who==="m")drawActor(o,enFrame(o),o.z||0,o.state==="dead");
     else drawActor(invader,enFrame(invader),invader.z||0,invader.state==="dead");}
   drawSmoke();
+  drawPostesEmenda(false);  // cone de luz por cima: quem passa embaixo fica iluminado
   drawVinis();drawFires();drawFireTelegraph();drawBrechas();
   drawRings();drawShots();drawSparks();drawBursts();drawPostes();cx.restore();
-  drawDmgNums();drawFlashOverlay();drawCombatHUD(dt);drawInvaderHUD();drawBannerInvasao(dt);drawGo();drawComboHUD(118);drawTutorial();}
+  drawDmgNums();drawFlashOverlay();
+  cx.save();hudTopo();drawCombatHUD(dt);drawInvaderHUD();drawBannerInvasao(dt);drawGo();drawComboHUD(118);drawTutorial();cx.restore();}
 // POSTES em primeiro plano (parallax mais rapido que o chao) = sensacao de movimento
+function ehPanorama(pi){const ph=P.phases[pi];return !!(ph&&ph.panorama);}
 function drawPostes(){
+  if(ehPanorama(enemy.pi))return; // cenario longo ja rola junto: sem disfarce
   const esp=CFG.POSTE_ESP||760,par=1.35,off=camX*par,first=Math.floor(off/esp)-1;
   for(let i=first;i<first+4;i++){const sx=i*esp-off+esp*0.5;if(sx<-80||sx>W+80)continue;
     cx.save();
@@ -2675,6 +2939,7 @@ function drawBonus(dt){drawPhaseBg();
   if(atras){drawPlayerActor();drawProps();}else{drawProps();drawPlayerActor();}
   drawRings();drawSparks();drawBursts();cx.restore();
   drawDmgNums();drawFlashOverlay();
+  cx.save();hudTopo();
   cx.fillStyle="rgba(6,4,10,.62)";cx.fillRect(0,0,W,84);cx.fillStyle="#000";cx.fillRect(0,84,W,3);
   cx.textAlign="left";cx.fillStyle="#ffcf33";cx.font='14px "Press Start 2P",monospace';cx.fillText("BÔNUS DO UNO",24,34);
   cx.fillStyle="#ffe36a";cx.font='12px "Press Start 2P",monospace';cx.fillText("★ "+String(score+bonus.pts).padStart(7,"0"),24,62);
@@ -2682,14 +2947,16 @@ function drawBonus(dt){drawPhaseBg();
   const tl=Math.ceil(bonus.timeLeft);
   cx.font='22px "Press Start 2P",monospace';cx.fillStyle=(tl<=5)?((performance.now()%500<250)?"#ff3c3c":"#ffd0d0"):"#fff";
   cx.fillText(String(tl).padStart(2,"0"),W/2,44);
+  cx.save();cx.translate(-HUD_R,0);
   bar(W-40,24,360,16,Math.max(0,bonus.car.hp/bonus.car.maxhp),"#ff8c00","#ffcf33","r");
   cx.textAlign="right";cx.fillStyle="#ffd27a";cx.font='10px "Press Start 2P",monospace';cx.fillText("UNO",W-40,62);
-  cx.textAlign="left";drawComboHUD(110);drawTutorial();}
+  cx.restore();
+  cx.textAlign="left";drawComboHUD(110);drawTutorial();cx.restore();}
 // barra de energia do chefe invasor, logo abaixo da do vilao da fase
 function drawInvaderHUD(){
   if(!invader||invader.state==="saindo")return;
   const ph=P.phases[invader.pi];
-  cx.save();
+  cx.save();cx.translate(-HUD_R,0);
   cx.fillStyle="rgba(6,4,10,.72)";cx.fillRect(W-372,90,352,36);
   cx.strokeStyle=ph.accent;cx.lineWidth=2;cx.strokeRect(W-372,90,352,36);
   cx.textAlign="left";cx.fillStyle="#ff6a6a";cx.font='8px "Press Start 2P",monospace';
@@ -2770,9 +3037,7 @@ function drawIntroTitle(){
   // blink COMEÇAR
   const blink=(performance.now()%900)<540;
   cx.textAlign="center";
-  if(blink){cx.save();cx.shadowColor="#fff";cx.shadowBlur=12;
-    cx.fillStyle="#fff";cx.font='14px "Press Start 2P",monospace';
-    cx.fillText("TOQUE PARA COMEÇAR",W/2,H*0.88+10);cx.restore();}
+  // (o botao JOGAR ja faz esse papel; o texto piscando ficava escondido atras dele)
   cx.textAlign="left";
 }
 function drawIntroCast(){
@@ -3256,7 +3521,7 @@ const DICAS=[
   {id:"combo",   l1:"👊 1 TOQUE = COMBO",      l2:"DE 3 HITS COM O SKATE",      alvo:"punch", quando:()=>vivosPerto(360)>0,               feito:()=>tut.comboHits>=2},
   {id:"fuga",    l1:"CERCADO? ⤴️⤴️ RÁPIDO",    l2:"= SALTO DE FUGA INVENCÍVEL", alvo:"jump",  quando:()=>tut.levouDano||vivosPerto(260)>=3, feito:()=>tut.fugiu},
   {id:"chute",   l1:"🦵 SHUV-IT EMPURRA",       l2:"E ABRE ESPAÇO NO CERCO",     alvo:"kick",  quando:()=>vivosPerto(260)>=2,               feito:()=>tut.chutou},
-  {id:"agarrao", l1:"ENCOSTA NO VILÃO",         l2:"+ 👊 = AGARRÃO E ARREMESSO", alvo:"punch", quando:()=>tutVisto.combo&&vivosPerto(110)>0, feito:()=>tut.agarrou},
+  {id:"agarrao", l1:"COLADO + 👊 = AGARRA · 👊 JOELHADA", l2:"🕹️ TRÁS/FRENTE + 👊 = ARREMESSA", alvo:"punch", quando:()=>tutVisto.combo&&vivosPerto(110)>0, feito:()=>tut.agarrou},
   {id:"voadora", l1:"NO AR: 👊 OU 🦵",          l2:"= VOADORA DE SKATE",         alvo:"kick",  quando:()=>player.z>40&&player.vz>0&&!player.airAtk, feito:()=>tut.voadora},
   {id:"caixa",   l1:"QUEBRA A CAIXA/LATÃO:",    l2:"PODE TER COPO DE CURA",      alvo:"punch", quando:()=>propPerto(p=>p.breakable,380),   feito:()=>tut.quebrou},
   {id:"manobras",l1:"NO SLIDE: 🕹️ ↑ ↓ ← →",     l2:"= MANOBRAS NO MESMO COMBO",  alvo:"stick", quando:()=>!!player.grindMode,               feito:()=>tut.manobra},
@@ -3394,6 +3659,7 @@ requestAnimationFrame(loop);
 (function(){
   if(typeof SEM_ADMIN!=="undefined"&&SEM_ADMIN){ // versao publicada: sem o botao 🛠️
     const b=document.getElementById('adminBtn'),pn=document.getElementById('adminPanel');if(b)b.remove();if(pn)pn.remove();return;}
+  if(!DEV){const b=document.getElementById('adminBtn');if(b)b.style.display='none';}
   function fileToDataURL(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(file);});}
   function dimsFromDataURL(src){return new Promise((res)=>{const im=new Image();im.onload=()=>res({w:im.naturalWidth,h:im.naturalHeight});im.onerror=()=>res({w:200,h:300});im.src=src;});}
   // redimensiona a imagem (canvas) pra bater exatamente na altura-alvo, preservando proporção
@@ -3476,7 +3742,7 @@ requestAnimationFrame(loop);
     const LBL={GRAB_X:'Agarrão dist X',GRAB_Y:'Agarrão dist Y',DOUBLE_TAP_MS:'⤴️⤴️ janela (ms)',VIBRAR:'Vibração (1/0)',TUTORIAL:'Tutorial contextual (1/0)',GUIA_ALINHAMENTO:'Guia de alinhamento no chão (1/0)',NOTA_TEMPO_PAR:'Nota: tempo ideal da fase (s)',NOTA_COMBO_ALVO:'Nota: combo p/ nota cheia',NOTA_PONTOS_ALVO:'Nota: pontos p/ nota cheia',VETERANOS_PCT:'Veteranos: % da onda (0-1)',VETERANOS_MAX_ONDA:'Veteranos: máx por onda',VETERANO_HP_MUL:'Veteranos: vida x capanga',JUMP_BUFFER_S:'Buffer ⤴️ durante golpe (s)',JUMP_BUFFER_POUSO_S:'Buffer ⤴️ antes do pouso (s)',ESCAPE_IFRAME_SEC:'Fuga invencível (s reais)',PUNCH_RANGE_X:'👊 alcance X',PUNCH_RANGE_Y:'👊 alcance Y (calçada)',PUNCH_RANGE_Z:'👊 alcance Z (altura)',ENEMY_STOP_DIST:'Vilão para a (px)',ENEMY_ATK_Y:'Vilão só ataca alinhado (Y)',ENEMY_HIT_X:'Golpe do vilão alcance X',ENEMY_HIT_Y:'Golpe do vilão alcance Y',
       ESCAPE_VZ:'Fuga altura',ESCAPE_VX:'Fuga distância',JUMP_VZ:'Pulo altura',KICK_KNOCKBACK:'🦵 empurrão',
       COMBO_HITS:'👊 hits do combo',COMBO_JANELA:'Contador: janela p/ encadear (s)',COMBO_BONUS:'Contador: pontos por hit (3+)',COMBO_WINDOW_MS:'👊 janela (ms)',FINISHER_KB:'👊 último hit empurra',THROW_T:'Agarrão duração (s)',
-      THROW_KB:'Arremesso força',FLYKICK_VX:'Voadora veloc.',AIR_COMBO_HITS:'Combo aéreo hits',AIR_HANG_VZ:'Combo aéreo flutua',AIR_CHAIN_DELAY:'Combo aéreo intervalo (s)',ESCAPE_STEER:'Fuga muda direção (1/0)',GRIND_SPEED:'Slide velocidade',MANOBRA_PTS:'Manobra: pontos (x nº da manobra)',MANOBRA_INTERVALO:'Manobra: intervalo mín (s)',MANOBRA_TEMPO_EXTRA:'Manobra: tempo extra no meio-fio (s)',MANOBRA_TEMPO_MAX:'Manobra: tempo extra máx (s)',MANOBRA_BONUS4:'Manobra: bônus das 4',MANOBRA_VEL_FRENTE:'→ Nosegrind: velocidade x',MANOBRA_VEL_TRAS:'← Tailslide: velocidade x',GRIND_MAX_MEIOFIO:'Slide meio-fio máx (s)',GRIND_HEAD_TICK:'Slide cabeça intervalo (s)',GRIND_HEAD_HITS:'Slide cabeça hits',GRIND_HOP_VZ:'Slide cabeça pulo saída',CURB_MARGIN:'Meio-fio distância',BANCO_A_CADA:'Banco a cada N props (0=sem)',FASE_LEN:'Comprimento da fase (px)',ONDAS:'Ondas de capangas',ONDA_BASE:'Capangas por onda (base)',ONDA_MAX:'Capangas por onda (máx)',UNO_NA_FASE:'Uno no início da fase (1/0)',CAPANGA_HP:'Vida do capanga',MAX_ATACANTES:'Capangas batendo juntos',OBST_HP:'Obstáculo: hits p/ quebrar',OBST_DROP_CURA:'Obstáculo: chance de copo (0-1)',OBST_CHANCE:'Obstáculo: frequência (0-1)',ARREMESSO_COLATERAL:'Arremesso: dano em quem atinge',BG_ZOOM:'Zoom do fundo',POSTE_ESP:'Postes: espaçamento',ESCAPE_ATK_IFRAMES:'Ataque mantém i-frames (1/0)',TELEGRAPH_FRAMES:'Aviso do vilão (frames)',COPO_CURA:'Copo cura',COPO_Y:'Copo alcance Y'};
+      THROW_KB:'Arremesso força',FLYKICK_VX:'Voadora veloc.',AIR_COMBO_HITS:'Combo aéreo hits',AIR_HANG_VZ:'Combo aéreo flutua',AIR_CHAIN_DELAY:'Combo aéreo intervalo (s)',ESCAPE_STEER:'Fuga muda direção (1/0)',ESCALA_PERSONAGENS:'Escala dos personagens',ESCALA_ALTURA:'Altura na tela (pulo/props)',VEL_MUL:'Velocidade do MC x',VEL_MUL_VILAO:'Velocidade dos vilões x',KB_MUL:'Empurrão dos golpes x',QUEDA_HITS:'MC cai após N golpes seguidos',QUEDA_JANELA:'Janela desses golpes (s)',QUEDA_DANO:'Golpe que derruba sozinho (dano)',QUEDA_CHAO:'MC no chão (s)',LEVANTA_INVENCIVEL:'MC levanta invencível (s)',DEITADO_T:'Vilão deitado (s)',LEVANTA_INVULN:'Vilão levanta invulnerável (s)',GRAB_HOLD:'Agarrão: tempo segurando (s)',JOELHADAS_MAX:'Agarrão: joelhadas máx',CARRO_PARALLAX:'Carro do fundo: movimento (0.1=10%)',CARRO_ESCALA:'Carro estacionado: escala',POSTE_ALTURA:'Poste: altura (px)',POSTE_LUZ:'Poste: força da luz',POSTE_CONE:'Poste: largura do cone de luz',POSTE_DEFEITO_CHANCE:'Poste com defeito: chance (0-1)',PROPS_CHANCE_FASE:'Objetos: chance da fase ter (0-1)',PROPS_MIN:'Objetos: mínimo',PROPS_MAX:'Objetos: máximo',PROPS_ESPACO:'Objetos: espaço mínimo (px)',COPOS_MIN:'Copos: mínimo',COPOS_MAX:'Copos: máximo',PESO_BANCO:'Sorteio: banco',PESO_CAIXA:'Sorteio: caixa de som',PESO_LATAO:'Sorteio: latão',CARRO_FUNDO_ESCALA:'Carro do fundo: escala',ESCALA_PROPS:'Escala de bancos/caixas',PISO_OPACIDADE:'Piso rolando: força (0=desliga)',PISO_ESP:'Piso rolando: espaço entre juntas',BG_PANORAMA_VEL:'Fundo panorâmico: velocidade',GRIND_SPEED:'Slide velocidade',MANOBRA_PTS:'Manobra: pontos (x nº da manobra)',MANOBRA_INTERVALO:'Manobra: intervalo mín (s)',MANOBRA_TEMPO_EXTRA:'Manobra: tempo extra no meio-fio (s)',MANOBRA_TEMPO_MAX:'Manobra: tempo extra máx (s)',MANOBRA_BONUS4:'Manobra: bônus das 4',MANOBRA_VEL_FRENTE:'→ Nosegrind: velocidade x',MANOBRA_VEL_TRAS:'← Tailslide: velocidade x',GRIND_MAX_MEIOFIO:'Slide meio-fio máx (s)',GRIND_HEAD_TICK:'Slide cabeça intervalo (s)',GRIND_HEAD_HITS:'Slide cabeça hits',GRIND_HOP_VZ:'Slide cabeça pulo saída',CURB_MARGIN:'Meio-fio distância',PROP_PROF:'Objetos: profundidade que ocupam (px)',DEGRAU_PULO_VILAO:'Degrau: pulo do vilão pra subir',BANCO_A_CADA:'Banco a cada N props (0=sem)',FASE_LEN:'Comprimento da fase (px)',ONDAS:'Ondas de capangas',ONDA_BASE:'Capangas por onda (base)',ONDA_MAX:'Capangas por onda (máx)',UNO_NA_FASE:'Uno no início da fase (1/0)',CAPANGA_HP:'Vida do capanga',MAX_ATACANTES:'Capangas batendo juntos',OBST_HP:'Obstáculo: hits p/ quebrar',OBST_DROP_CURA:'Obstáculo: chance de copo (0-1)',OBST_CHANCE:'Obstáculo: frequência (0-1)',ARREMESSO_COLATERAL:'Arremesso: dano em quem atinge',BG_ZOOM:'Zoom do fundo',POSTE_ESP:'Postes: espaçamento',ESCAPE_ATK_IFRAMES:'Ataque mantém i-frames (1/0)',TELEGRAPH_FRAMES:'Aviso do vilão (frames)',COPO_CURA:'Copo cura',COPO_Y:'Copo alcance Y'};
     const row=document.createElement('div');row.className='adminRow';row.style.flexWrap='wrap';
     Object.keys(LBL).forEach(k=>{
       const w=document.createElement('label');w.style.cssText='display:inline-flex;gap:4px;align-items:center;margin:2px 8px 2px 0';

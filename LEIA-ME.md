@@ -99,3 +99,15 @@ Durante o slide (⤴️ + segurar 🦵), cada direção do manche é uma manobra
 ## Versão para publicar sem o Admin
 
 No Admin, **BAIXAR SEM ADM** gera um `dados.js` com `SEM_ADMIN=true`. Com ele o botão 🛠️ some. Também dá para trocar essa linha à mão no topo de `js/dados.js`.
+
+## Painel admin e ajuste dos controles (modo dev)
+
+Os botões 🛠️ (admin) e ⚙ (tamanho do manche e dos botões) ficam **escondidos do jogador**.
+
+- Para ligar no seu aparelho: abra o jogo uma vez com `?admin=1` no fim do endereço (ex.: `index.html?admin=1`). Fica lembrado naquele navegador.
+- Para desligar: abra com `?admin=0`.
+- `SEM_ADMIN = true` em `js/dados.js` continua valendo: remove o painel de vez, mesmo com `?admin=1`.
+
+## Instalar como app
+
+O jogo tem manifesto (`manifest.webmanifest`) e ícones em `assets/ui/icone-*.png`. Publicado em `https://`, o navegador do celular oferece "Adicionar à tela inicial" e o jogo abre em tela cheia, deitado, sem barra de endereço.

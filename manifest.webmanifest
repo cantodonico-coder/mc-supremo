@@ -1,0 +1,18 @@
+{
+  "name": "MC SUPREMO — Turnê Underground POA",
+  "short_name": "MC Supremo",
+  "description": "Beat 'em up de skate e reggae em Porto Alegre. Nicosheik Labs.",
+  "lang": "pt-BR",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone"],
+  "orientation": "landscape",
+  "background_color": "#0b0b11",
+  "theme_color": "#0b0b11",
+  "icons": [
+    { "src": "assets/ui/icone-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/ui/icone-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/ui/icone-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
