@@ -111,3 +111,91 @@ Os botões 🛠️ (admin) e ⚙ (tamanho do manche e dos botões) ficam **escon
 ## Instalar como app
 
 O jogo tem manifesto (`manifest.webmanifest`) e ícones em `assets/ui/icone-*.png`. Publicado em `https://`, o navegador do celular oferece "Adicionar à tela inicial" e o jogo abre em tela cheia, deitado, sem barra de endereço.
+
+## Vilões novos, versão azul e poses novas (out/2026)
+
+**Elenco das ondas: 10 personagens × 2 (normal e azul) = 20 vilões, cada um com um jeito de lutar só dele.**
+
+- 4 personagens novos em `assets/viloes/08-skatista-laranja`, `09-faca`, `10-regata`, `11-colete-preto` (ficam em `P.tipos` no `js/dados.js`).
+- 6 chefes já vencidos voltam nas ondas das fases seguintes.
+- A versão azul é pintada pelo motor em cima da arte normal (não precisa de arquivo azul). Mesmo nível de vida e dano.
+
+| Personagem | Desde a fase | Normal | Azul |
+|---|---|---|---|
+| LARANJA | 1 | Investida de skate em linha reta | Bate e foge |
+| REGATA | 1 | Agarrador | Golpe duplo |
+| FACA | 2 | Estocada de longe | Dá a volta e ataca pelas costas |
+| COLETE | 3 | Voadora | Muralha (defende muito) |
+| JAY | 2 | Pesado (quase não é empurrado) | Golpe triplo |
+| O SKATER | 3 | Esquiva (sai da faixa quando você bate) | Investida vai e volta |
+| OLD T | 4 | Fúria (acelera com metade da vida) | Empurrão (joga o MC longe) |
+| MÃO DE PEDRA | 5 | Marreta (soco lento e forte) | Levanta batendo |
+| WALESKA | 6 | Metralha (chutes rápidos e fracos) | Pula por cima de você |
+| MAZAROPE | 7 | Contra-ataque (defende e revida) | Marcação (nunca sai da sua faixa) |
+
+**Ondas no padrão Streets of Rage**
+- 2 capangas fracos da gangue do chefe por onda (os recoloridos, briga comum) fazem volume.
+- Os especiais chegam de 2 em 2, um de cada lado: 1 normal + 1 azul de personagens diferentes. O normal e o azul do mesmo boneco nunca vêm no mesmo par.
+- Todo o elenco da fase aparece antes de alguém repetir.
+- Na onda do meio de cada fase vem um **mini-chefe**: um vilão do elenco maior, com 3× a vida e letreiro "CHEFÃO".
+- O tamanho total da onda continua o de antes (4 a 8), mais o mini-chefe.
+
+**Vidas**
+- 3 vidas. Acabou a energia: perde 1 vida e volta no mesmo lugar, invencível por um instante, com os vilões jogados para longe.
+- Sem vidas: tela de derrota. CONTINUAR volta ao início da onda com 3 vidas e os pontos daquele ponto.
+- Vida extra a cada 20.000 pontos, até 5.
+- Ajuste em `P.regras` no `js/dados.js` (`vidas`, `vidaExtraPts`, `vidasMax`).
+
+**Como o jogador responde (3 botões)**
+- Investida, vai e volta (aviso azul com "!"): ⤴️ pula por cima, ou sai da faixa com o manche. Na vai e volta vem uma segunda passada.
+- Voadora: sai da faixa com o manche (pular não desvia).
+- Estocada e marreta: aviso longo; 🦵 afasta ou sai do alcance.
+- Agarrador (aviso vermelho): ⤴️⤴️ salto de fuga.
+- Bate e foge, metralha: 👊 logo depois do golpe.
+- Duplo e triplo: 🦵 afasta ou ⤴️⤴️ sai depois do primeiro golpe.
+- Pelas costas, pula por cima: vire o manche para ele.
+- Muralha, contra-ataque: 🦵 abre a guarda, depois 👊. No contra-ataque, afaste depois de bater na guarda.
+- Esquiva: alinhe a faixa de novo (a guia no chão mostra) ou use 🦵, que alcança mais.
+- Pesado: 👊 colado para agarrar e arremessar.
+- Fúria: acabe rápido quando ele passar da metade da vida.
+- Empurrão: ⤴️⤴️ ou 🦵 antes do golpe; se levar, você é jogado longe.
+- Levanta batendo: depois de derrubar, afaste; ele levanta já com golpe armado.
+- Marcação: mudar de faixa não despista; use 🦵 e 👊.
+
+**Ajustes** em `js/dados.js`:
+- `P.tipos` — nome, `faseMin`, `hpMul`, `dmg`, `perfil`, `perfilAzul` e os quadros de cada personagem novo.
+- `P.perfis` — os 20 jeitos de lutar. Os marcados com `soAzul` são os da versão azul.
+- `P.mistura` — `parGap` (segundos entre um par e o próximo), `gangue` (capangas fracos por onda), `miniChefe` (1 liga, 0 desliga), `miniHp` e o perfil normal e azul de cada chefe veterano.
+
+**Poses novas dos chefes** — JAY, OLD T e MÃO DE PEDRA ganharam caído (`koPose`), voando (`voandoA`) e sentado/levantando (`sentadoA`). Qualquer vilão pode receber essas três listas no `dados.js`.
+
+## Armas, outdoor e pancada do JAY (out/2026)
+
+**Armas pegáveis** — `assets/props/arma-*.webp`, config em `P.armas` no `js/dados.js`.
+
+| Arma | Golpes até quebrar | Golpe (👊) | Arremesso (🦵) |
+|---|---|---|---|
+| GARRAFA | 3 | forte, alcance curto | derruba; quebra ao bater |
+| SHAPE | 6 | alcance longo | derruba; cai no chão com 1 uso a menos |
+| TÁBUA | 4 | o mais forte, derruba | derruba; cai no chão com 1 uso a menos |
+| COPO | 1 | não bate: 👊 também arremessa | dano baixo, não derruba |
+
+- 👊 perto de uma arma no chão, sem vilão no alcance do soco: pega.
+- 👊 com arma: golpe de arma (acerta todos na frente). Com arma na mão o 👊 não agarra.
+- 🦵 com arma: arremessa em linha reta na sua faixa. Com arma na mão o 🦵 não empurra.
+- Levou golpe, foi agarrado ou perdeu vida: a arma cai no chão.
+- 2 armas espalhadas por fase; caixa de som e lixeira quebradas soltam arma em 35% das vezes que não soltam copo.
+- Ajuste: `P.regras.armasPorFase`, `P.regras.armaDropPct` e os campos de cada arma (`dano`, `alcance`, `usos`, `arremesso`, `derruba`).
+
+**Outdoor COPO VAZIO** — propaganda no fundo, uma por fase, atrás dos personagens. Imagens em `assets/cenarios/outdoor-copo-vazio-*.webp` (alternam por fase). Ajuste em `P.outdoor` (`largura`, `perna`, e `pos` para escolher a posição numa fase: na Redenção fica fora do centro, longe do monumento); apague o bloco para tirar.
+
+**Pancada do JAY** — golpe novo com a pose do shape acima da cabeça (`pancadaA`): aviso longo em vermelho, dano alto e derruba. Vale para o JAY chefe e para o JAY que volta nas ondas. Resposta: 🦵 afasta antes, sair do alcance, ou ⤴️⤴️. Qualquer vilão que receber `pancadaA` no `dados.js` ganha o golpe.
+
+## Especial: giro 360 (out/2026)
+
+- **Comando**: segure 👊 por meio segundo (um anel amarelo enche no chão) e solte.
+- **Efeito**: giro de skate invencível que acerta e derruba todos em volta e fura a guarda.
+- **Custo (modelo Streets of Rage 4)**: gasta 8% da vida. Essa vida fica em aberto, em verde claro na barra, e volta 2 pontos a cada golpe acertado depois. Se apanhar antes, perde o que faltava voltar.
+- **Pânico**: dá para soltar mesmo cambaleando de um golpe. Não funciona caído nem agarrado.
+- Com 1 ponto de vida o especial não sai. Toque curto no 👊 continua sendo o soco normal.
+- Ajuste em `P.regras` no `js/dados.js`: `especialSegura`, `especialCusto`, `especialVolta`, `especialDano`, `especialRaio`.

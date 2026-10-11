@@ -34,8 +34,13 @@ function mkTint(src,cfg){
       const pele=((hh<0.12)||(hh>0.95))&&s>0.12&&s<0.80&&v>0.28;
       const neutro=s<0.12;
       if(neutro&&cfg.neutro&&!pele&&v>0.18){d[i]*=cfg.neutro[0];d[i+1]*=cfg.neutro[1];d[i+2]*=cfg.neutro[2];continue;} // roupa branca/cinza tingida (capangas)
+      let h2,s2,v2;
+      if(cfg.azul){ // VERSAO AZUL: tudo que e quente (pele, laranja, vermelho, amarelo, rosa, marrom) vira azul; verde, azul e neutros ficam
+        if(s<0.12||!(hh<0.19||hh>0.78))continue;
+        h2=0.635;s2=Math.min(1,Math.max(s,0.42));v2=Math.min(1,v*1.03);}
+      else{
       if(pele||neutro)continue;
-      const h2=(hh+sh+1)%1, s2=Math.min(1,s*st), v2=Math.min(1,v*vl);
+      h2=(hh+sh+1)%1;s2=Math.min(1,s*st);v2=Math.min(1,v*vl);}
       const k=Math.floor(h2*6)%6,f=h2*6-Math.floor(h2*6);
       const pp=v2*(1-s2),q=v2*(1-f*s2),tt=v2*(1-(1-f)*s2);
       let R,G,B;
@@ -103,12 +108,21 @@ P.phases.forEach(ph=>{ph.chefe=true;});
 
 function idxChefes(){const a=[];P.phases.forEach((ph,i)=>{if(ph.chefe)a.push(i);});return a;}
 function fsA(a,t){return a?fsetArr(a,t):null;}
+// arte de CAIDO ja desenhada deitada: o motor nao gira o boneco (o koPose antigo do O SKATER continua so pra derrota)
+function marcaDeitado(fr,d){if(fr&&d&&d.voandoA)fr.forEach(f=>f.deitadoArt=true);return fr;}
+// monta o conjunto de quadros de um vilao (fase ou tipo novo), com tinta opcional
+function montaSetVilao(d,t,sizeMul){
+  return {idle:fset(d.idle,t),guard:fset(d.guard||d.idle,t),attack:fset(d.attack||d.idle,t),attack2:fset(d.attack2||d.attack||d.idle,t),
+    attack3:fset(d.attack3,t)||null,taunt:fset(d.taunt||d.idle,t),
+    idleA:fsA(d.idleA,t),walkA:fsA(d.walkA,t),socoA:fsA(d.socoA,t),chuteA:fsA(d.chuteA,t),puloA:fsA(d.puloA,t),danoA:fsA(d.danoA,t),
+    tauntA:null,mksA:null,victoryA:null,koPose:marcaDeitado(fset(d.koPose,t),d),
+    voandoA:fsA(d.voandoA,t),sentadoA:fsA(d.sentadoA,t),agarraA:fsA(d.agarraA,t),rushA:fsA(d.rushA,t),pancadaA:fsA(d.pancadaA,t),sizeMul:sizeMul};}
 P.phases.forEach(ph=>{const t=ph.tint||null;IMG.phases.push({bg:mkImgLazy(ph.bg),port:mkAny(ph.port,t),
   idle:fset(ph.idle,t),guard:fset(ph.guard,t)||fset(ph.idle,t),attack:fset(ph.attack,t),
   attack2:fset(ph.attack2,t)||fset(ph.attack,t),attack3:fset(ph.attack3,t)||null,taunt:fset(ph.taunt,t)||fset(ph.idle,t),
   idleA:fsA(ph.idleA,t),walkA:fsA(ph.walkA,t),socoA:fsA(ph.socoA,t),chuteA:fsA(ph.chuteA,t),puloA:fsA(ph.puloA,t),danoA:fsA(ph.danoA,t),
   tauntA:fsA(ph.tauntA,t),mksA:fsA(ph.mksA,t),
-  victoryA:fsA(ph.victoryA,t),koPose:fset(ph.koPose,t),
+  victoryA:fsA(ph.victoryA,t),koPose:marcaDeitado(fset(ph.koPose,t),ph),voandoA:fsA(ph.voandoA,t),sentadoA:fsA(ph.sentadoA,t),agarraA:fsA(ph.agarraA,t),rushA:fsA(ph.rushA,t),pancadaA:fsA(ph.pancadaA,t),
   name:ph.name,cenario:ph.cenario,accent:ph.accent,hp:ph.hp,grant:ph.grant,grantName:ph.grantName,sizeMul:ph.sizeMul||1,bgPanMax:ph.bgPanMax||0});});
 // conferencia automatica: nenhum vilao pode aparecer duas vezes
 (function(){const vis={};P.phases.forEach((ph,i)=>{
@@ -937,10 +951,10 @@ function preparaFase(i){
     [IMG.abacaxiParty,IMG.nicoBeach,IMG.nicoNessa].forEach(im=>im&&im._carregar&&im._carregar());
     AU.prepara("creditos");}
 }
-function startPhase(){setTimeout(()=>{try{capangaSet(phaseIndex,0);capangaSet(phaseIndex,1);}catch(e){}},60);preparaFase(phaseIndex);ckpt=null;montaPostes();Object.assign(est,{t:0,dano:0,pts0:score,cont:false});combo.max=0;notaFase=null;{const fph=P.phases[phaseIndex]||{};CUR_WORLD_LEN=fph.faseLen||Math.max(fph.worldLen||WORLD_LEN,CFG.FASE_LEN||0);}const band=bandFor(phaseIndex);player=newPlayer(band);enemy=newEnemy(P.phases[phaseIndex].hp,phaseIndex,band);enemy.state="espera";enemy.wx=CUR_WORLD_LEN+400;
+function startPhase(){if(vidas<=1)vidas=regra("vidas",3);setTimeout(()=>{try{capangaSet(phaseIndex,0);capangaSet(phaseIndex,1);}catch(e){}preCarregaTipos();},60);preparaFase(phaseIndex);ckpt=null;montaPostes();Object.assign(est,{t:0,dano:0,pts0:score,cont:false});combo.max=0;notaFase=null;{const fph=P.phases[phaseIndex]||{};CUR_WORLD_LEN=fph.faseLen||Math.max(fph.worldLen||WORLD_LEN,CFG.FASE_LEN||0);}const band=bandFor(phaseIndex);player=newPlayer(band);enemy=newEnemy(P.phases[phaseIndex].hp,phaseIndex,band);enemy.state="espera";enemy.wx=CUR_WORLD_LEN+400;
   trackQueue=buildTrack(band);track=[];bonus=null;lastBonusPts=null;mooks=[];hudAlvo=null;comboReset();AU.setFuryTempo(false);
   camX=0;sparks=[];rings=[];shots=[];fires=[];vinis=[];seq=[];timeLeft=99;
-  invader=null;bannerT=0;agendaInvasao(true);planejaOndas();phaseResolved=false;scene="phase";fadeT=0.35;}
+  invader=null;bannerT=0;agendaInvasao(true);planejaOndas();espalhaArmas();phaseResolved=false;scene="phase";fadeT=0.35;}
 // =====================================================================
 // CONTINUAR DO INICIO DA ONDA
 // Ao perder, o jogador volta alguns passos antes da ultima onda que comecou
@@ -955,6 +969,7 @@ function continuaDaOnda(){
   // recua ~200px: o jogador respira e caminha ate a trava, a onda comeca quando ele chega
   camX=Math.max(0,c.x-200);player.wx=camX+W*0.36;
   trackQueue=trackQueue.filter(pr=>pr.wx-pr.w/2>camX+W*0.36+60); // nada nascendo em cima do MC
+  vidas=regra("vidas",3);
   avisoHUD(c.boss?"DE VOLTA PRO CHEFE!":"CONTINUA! ONDA "+(c.onda+1)+"/"+ondas.length);}
 function toHub(){
   if(!flow.historia){scene="intro";introPage=1;introDestino="hub";fadeT=0.35;return;} // 1a vez no museu: elenco + mapa da turne
@@ -973,7 +988,7 @@ function mostraVitoriaBoss(ph,faseVencida){
     BossTouch.showVictoryScreen({bossName: ph.name || 'o Chefe',phase: faseVencida,gameName: 'MC SUPREMO',url: location.href});
   }
 }
-function resolveLose(){if(phaseResolved)return;phaseResolved=true;resultType="lose";loseIdx=0;
+function resolveLose(){if(phaseResolved)return;if(scene==="phase"&&vidas>1){perdeVida();return;}phaseResolved=true;resultType="lose";loseIdx=0;
   LOSE_OPTS=ckpt?[OPT_CONTINUAR].concat(LOSE_BASE):LOSE_BASE; // CONTINUAR vem primeiro e ja selecionado
   scene="result";fadeT=0.35;AU.stopLoop();AU.lose();}
 // ---------- combate ----------
@@ -1026,6 +1041,9 @@ function damageEnemy(dmg,kb,stun,tag,alvo,kind){const e=alvo||enemy;
     addDmgNum(e.wx,e.y-140,"GUARD!",false,"#5599ff");
     doHitStop(0.03);
     e.guarding=false;e.guardT=0;
+    if(e.mook&&e.perfil&&e.perfil.contra&&e.state==="approach"){ // CONTRA-ATAQUE: defendeu, revida (com aviso)
+      e.state="windup";e.meleeType='punch';e.windT=Math.max(e.perfil.contra,CFG.TELEGRAPH_FRAMES/60);e.cd=0;
+      rings.push({wx:e.wx,y:e.y-60,r:14,t:e.windT+0.1,c:"#5599ff"});}
     if(kind==='chute')e.kbx=(Math.sign(e.wx-player.wx)||1)*(kb||190)*0.8; // 🦵 abre espaco mesmo na guarda
     return;
   }
@@ -1036,6 +1054,8 @@ function damageEnemy(dmg,kb,stun,tag,alvo,kind){const e=alvo||enemy;
   const isBossFight=(e===enemy && P.phases[e.pi] && P.phases[e.pi].chefe);
   // Boss recebe dano SEMPRE. Quando paralisado (stunT>0) fica imóvel e o dano é DOBRADO.
   if(isBossFight && e.stunT>0) dmg=Math.round(dmg*2);
+  if(player.hpVolta>0&&!(player.espT>0)&&kind!=='especial'){const r=Math.min(player.hpVolta,regra("especialVolta",2));player.hpVolta-=r;player.hp=Math.min(player.maxhp,player.hp+r);
+    addDmgNum(player.wx,player.y-235,"+"+r,false,"#9df0c0");}
   AU.hurt();e.hp-=dmg;e.flashT=0.14;shake=Math.max(shake,7);score+=dmg*10;
   vib((kb||0)>=1000||dmg>=10?28:12);   // hit leve 12ms · hit final/arremesso 28ms
   comboHit();if(kind==='chute')tut.chutou=true;
@@ -1086,7 +1106,7 @@ function damagePlayer(dmg,deWx){if(player.hurtT>0||player.iframes>0||player.isIn
     addDmgNum(player.wx,player.y-120,"GUARD!",false,"#5599ff");
     return;
   }
-  AU.hurt();player.hp-=dmg;player.flashT=0.12;vib([30,40,30]);comboFecha(true);tut.levouDano=true;est.dano+=dmg; // levou dano: padrao duplo, diferente de bater
+  AU.hurt();player.hp-=dmg;player.flashT=0.12;vib([30,40,30]);largaArma(player);player.hpVolta=0;comboFecha(true);tut.levouDano=true;est.dano+=dmg; // levou dano: padrao duplo, diferente de bater
   const ox=(deWx===undefined)?enemy.wx:deWx;
   shake=Math.max(shake,8);player.kbx=(Math.sign(player.wx-ox)||-1)*170;player.hurtT=0.32;
   if(player.throwTgt){player.throwTgt.grabbed=false;player.throwTgt=null;player.segT=0;player.throwT=0;}
@@ -1211,6 +1231,8 @@ function quebraObst(pr){
   if(Math.random()<CFG.OBST_DROP_CURA){const im=IMG.props.copo,sc=PROP_CFG.copoScale;
     track.push({type:"copo",wx:pr.wx,w:im.w*sc,h:im.h*sc,topH:0,solidTop:false,y:pr.y,dmg:0,smokeT:0,hp:1});
     addDmgNum(pr.wx,pr.y-150,"COPO!",false,"#2ec27e");}
+  else if(listaArmas().length&&Math.random()<regra("armaDropPct",0.35)){const L=listaArmas(),k=L[(Math.random()*L.length)|0];
+    poeArmaNoChao(k,pr.wx,pr.y);addDmgNum(pr.wx,pr.y-150,P.armas[k].nome+"!",false,"#ffcf33");}
   else{score+=300;addDmgNum(pr.wx,pr.y-150,"+300",false,"#ffe36a");}
 }
 function bateNoCarro(p,reach){
@@ -1461,6 +1483,101 @@ function alvoColado(p){let best=null,bd=1e9;
     if(dx<=CFG.GRAB_X*kX()&&dy<=CFG.GRAB_Y&&dx<bd){bd=dx;best=t;}}
   return best;}
 // 👊 no chao: colado = agarrao; longe = proximo hit do combo automatico
+// =====================================================================
+// ARMAS PEGAVEIS (padrao Streets of Rage, dentro dos 3 botoes)
+//  👊 perto de uma arma no chao (sem vilao no alcance) = pega · 👊 com arma = golpe de arma
+//  🦵 com arma = arremessa · apanhou = a arma cai · a arma quebra depois de alguns golpes
+// =====================================================================
+IMG.armas={};if(P.armas)for(const k in P.armas)IMG.armas[k]={img:mkImg(P.armas[k].src),w:P.armas[k].w,h:P.armas[k].h};
+let armasChao=[],armasVoando=[];
+function listaArmas(){return P.armas?Object.keys(P.armas):[];}
+function poeArmaNoChao(k,wx,y,usos){const d=P.armas&&P.armas[k];if(!d)return;armasChao.push({k:k,wx:wx,y:y,usos:usos||d.usos||1});}
+function espalhaArmas(){armasChao=[];armasVoando=[];player.arma=null;player.armaT=0;
+  const n=regra("armasPorFase",2)|0,L=listaArmas();if(!L.length||n<=0)return;const b=curBand();
+  for(let i=0;i<n;i++){const wx=Math.round(W*0.6+(CUR_WORLD_LEN-W*1.4)*(i+0.35+Math.random()*0.3)/n);
+    poeArmaNoChao(L[(Math.random()*L.length)|0],wx,b.top+18+Math.random()*Math.max(1,b.bottom-b.top-36));}}
+function armaPerto(p){if(p.z>4||!armasChao.length)return null;
+  for(const a of armasChao)if(Math.abs(a.wx-p.wx)<80&&Math.abs(a.y-p.y)<=CFG.COPO_Y)return a;return null;}
+function estilhaco(wx,y,c){for(let i=0;i<10;i++)sparks.push({wx:wx,y:y,vx:(Math.random()-.5)*420,vy:-100-Math.random()*260,t:0.5,c:c||"#cfe"});}
+function pegaArma(p,a){const i=armasChao.indexOf(a);if(i>=0)armasChao.splice(i,1);p.arma={k:a.k,usos:a.usos};const d=P.armas[a.k];
+  addDmgNum(p.wx,p.y-200,d.nome+"!",true,"#ffcf33");AU.select();vib(15);
+  if(!tut.arma){tut.arma=true;avisoHUD(d.soArremesso?"SOCO OU CHUTE: ARREMESSA":"SOCO BATE · CHUTE ARREMESSA");}}
+function largaArma(p){if(!p.arma)return;poeArmaNoChao(p.arma.k,p.wx-p.facing*40,p.y,p.arma.usos);p.arma=null;p.armaT=0;}
+function gastaArma(p){const d=P.armas[p.arma.k];p.arma.usos--;
+  if(p.arma.usos<=0){addDmgNum(p.wx,p.y-215,"QUEBROU!",false,"#ff7a5a");estilhaco(p.wx+p.facing*70,p.y-120,d.cor);p.arma=null;}}
+function balancaArma(p){const d=P.armas[p.arma.k];if(d.soArremesso)return arremessaArma(p);
+  p.comboStep=0;p.bufPunchT=0;p.state="attack";p.armaT=0.32;p.armaHit=false;p.skAnim=0;p.atkId=(p.atkId||0)+1;AU.punch();}
+function arremessaArma(p){
+  armasVoando.push({k:p.arma.k,usos:p.arma.usos,wx:p.wx+p.facing*50,y:p.y,z:70,vx:p.facing*900,dir:p.facing,rot:0,dist:0});
+  p.arma=null;p.armaT=0;p.comboStep=0;p.bufPunchT=0;p.state="kick";p.kickT=0.2;p.kickHit=true;p.skAnim=0;AU.kickHit();}
+function golpeDeArma(p){const d=P.armas[p.arma.k],reach=CFG.PUNCH_RANGE_X+(d.alcance||0);let acertou=false;
+  if(quebraVinis(p,HERO().reachSoco))acertou=true;
+  if(bateNoCarro(p,reach*kX()))acertou=true;
+  for(const t of alvos()){if(t.grabbed||!inReach(p,t,reach,CFG.PUNCH_RANGE_Y+8))continue;acertou=true;
+    damageEnemy(Math.round(HERO().dmgSoco*(d.dano||2)),d.derruba?CFG.FINISHER_KB:520,0.5,null,t,'soco');
+    if(d.derruba&&t.state!=="dead")t.vz=Math.max(t.vz||0,380);
+    impactBurst(t.wx,t.y-110,"#fff2c0",true);}
+  if(acertou){shake=Math.max(shake,10);gastaArma(p);}}
+function atualizaArmas(dt){
+  for(let i=armasChao.length-1;i>=0;i--)if(armasChao[i].wx<camX-120)armasChao.splice(i,1); // saiu pela esquerda: some da memoria
+  for(let i=armasVoando.length-1;i>=0;i--){const a=armasVoando[i],d=P.armas[a.k];
+    a.wx+=a.vx*dt;a.dist+=Math.abs(a.vx)*dt;a.rot+=dt*16;let fim=false,errou=false;
+    for(const t of alvos()){if(t.grabbed||Math.abs(t.wx-a.wx)>58||Math.abs(t.y-a.y)>CFG.PUNCH_RANGE_Y+10)continue;
+      damageEnemy(d.arremesso||10,d.naoDerruba?420:CFG.FINISHER_KB,0.6,null,t,'soco');
+      if(!d.naoDerruba&&t.state!=="dead")t.vz=Math.max(t.vz||0,360);
+      impactBurst(t.wx,t.y-110,"#fff2c0",true);shake=Math.max(shake,9);fim=true;break;}
+    if(!fim&&(a.dist>760||a.wx<camX-30||a.wx>camX+W+30)){fim=true;errou=true;}
+    if(fim){armasVoando.splice(i,1);
+      if(d.quebraAoArremessar||a.usos<=1||a.wx<camX+20||a.wx>camX+W-20){estilhaco(a.wx,a.y-(errou?12:110),d.cor);AU.kickHit();}
+      else poeArmaNoChao(a.k,a.wx-a.dir*36,a.y,a.usos-1);}}}
+function desenhaArmaSprite(k,x,y,sc,rot,flip){const im=IMG.armas[k],d=P.armas[k];if(!im||!im.img.ok)return;
+  const w=im.w*sc,h=im.h*sc;cx.save();cx.translate(x,y);if(flip)cx.scale(-1,1);cx.rotate(rot);
+  try{cx.drawImage(im.img,-w*(d.pegaX!==undefined?d.pegaX:0.12),-h/2,w,h);}catch(e){}cx.restore();}
+function escalaArma(y){return dscale(y)*escalaChar()*(player.sizeMul||0.6)*0.85;} // acompanha o porte do heroi
+function drawArmaChao(a){const sx=screenX(a.wx);if(sx<-200||sx>W+200)return;const sc=escalaArma(a.y),im=IMG.armas[a.k];if(!im||!im.img.ok)return;
+  if(a.vx!==undefined){drawShadow(sx,a.y,sc*0.6,a.z);const w=im.w*sc,h=im.h*sc;
+    cx.save();cx.translate(sx,a.y-a.z*kZ());cx.rotate(a.rot*a.dir);try{cx.drawImage(im.img,-w/2,-h/2,w,h);}catch(e){}cx.restore();return;}
+  const w=im.w*sc,h=im.h*sc,t=performance.now();drawShadow(sx,a.y,sc*0.7,0);
+  cx.save();cx.globalAlpha=0.45+0.4*Math.sin(t/220);cx.strokeStyle="#ffcf33";cx.lineWidth=2;cx.beginPath();cx.ellipse(sx,a.y,w*0.56,8,0,0,6.283);cx.stroke();cx.restore();
+  try{cx.drawImage(im.img,sx-w/2,a.y-h-3+Math.sin(t/260+a.wx)*2,w,h);}catch(e){}}
+function drawArmaNaMao(p){if(!p.arma||p.downT>0||scene==="bonus"&&false)return;const fr=HIMG().idle[0];
+  const H=fr.h*dscale(p.y)*escalaChar()*(p.sizeMul||1),sx=screenX(p.wx),z=(p.z||0)*kZ();
+  let ang=-1.15;if(p.armaT>0){const k=1-p.armaT/0.32;ang=-2.1+k*2.8;}
+  desenhaArmaSprite(p.arma.k,sx+p.facing*H*0.17,p.y-z-H*0.52,escalaArma(p.y),ang,p.facing<0);}
+// =====================================================================
+// ESPECIAL (modelo Streets of Rage 4): segurar 👊 e soltar = GIRO 360 de skate.
+// Invencivel, acerta e derruba todos em volta. Custa um pouco de vida, que fica "em aberto"
+// (verde claro na barra) e VOLTA a cada golpe acertado depois; se apanhar antes, perde o que faltava.
+// Serve de botao de panico: da pra soltar mesmo cambaleando de um golpe.
+// =====================================================================
+function especialPronto(p){return (p.cargaT||0)>=regra("especialSegura",0.5);}
+function carregaEspecial(p,dt){
+  if(p.downT>0||p.presoT>0||p.paralyzedT>0||p.espT>0||p.segT>0||p.throwT>0||scene!=="phase"){p.cargaT=0;p.cargaOk=false;return;}
+  if(held.punch){p.cargaT=(p.cargaT||0)+dt/GAME_SPEED;
+    if(especialPronto(p)&&!p.cargaOk){p.cargaOk=true;vib(25);AU.select();rings.push({wx:p.wx,y:p.y,r:16,t:0.35,c:"#ffcf33"});}
+    return;}
+  if(especialPronto(p))soltaEspecial(p);
+  p.cargaT=0;p.cargaOk=false;}
+function soltaEspecial(p){
+  if(p.hp<=1){addDmgNum(p.wx,p.y-210,"SEM VIDA!",false,"#ff7a5a");return;}
+  const custo=Math.min(p.hp-1,Math.max(1,Math.round(p.maxhp*regra("especialCusto",0.08))));
+  p.hp-=custo;p.hpVolta=(p.hpVolta||0)+custo;
+  p.espT=0.5;p.espHit=0;p.espFace=p.facing;p.hurtT=0;p.atkT=0;p.kickT=0;p.armaT=0;p.bufPunchT=0;p.comboStep=0;p.atkFinisher=false;
+  p.grindMode=null;p.grinding=false;p.kbx=0;p.state="attack";p.skAnim=0;p.atkId=(p.atkId||0)+1;
+  p.iframes=Math.max(p.iframes||0,0.62);press.punch=press.kick=false;
+  addDmgNum(p.wx,p.y-225,"GIRO 360!",true,"#ffcf33");AU.power();shake=Math.max(shake,10);vib([20,30,40]);tut.especial=true;
+  for(let i=0;i<3;i++)rings.push({wx:p.wx,y:p.y,r:20+i*26,t:0.45,c:"#ffcf33"});}
+function golpeEspecial(p){const R=regra("especialRaio",150)*kX();
+  for(const t of alvos()){if(t.grabbed||Math.abs(t.wx-p.wx)>R||Math.abs(t.y-p.y)>46)continue;
+    if(t.__espId===p.atkId)continue;t.__espId=p.atkId;t.guarding=false;t.guardT=0; // o giro fura a guarda
+    damageEnemy(Math.round(HERO().dmgSoco*regra("especialDano",2.5)),CFG.FINISHER_KB,0.9,null,t,'especial');
+    if(t.state!=="dead"){t.vz=Math.max(t.vz||0,420);t.kbx=(Math.sign(t.wx-p.wx)||1)*Math.abs(t.kbx||900);}
+    impactBurst(t.wx,t.y-110,"#ffcf33",true);}
+  quebraVinis(p,HERO().reachSoco);}
+function drawCargaEspecial(p){const c=p.cargaT||0;if(c<0.14||p.espT>0)return;
+  const k=Math.min(1,c/regra("especialSegura",0.5)),sx=screenX(p.wx),pronto=k>=1;
+  cx.save();cx.lineWidth=pronto?5:4;cx.strokeStyle=pronto?((performance.now()%160<80)?"#fff2c0":"#ffcf33"):"#ffcf33";cx.globalAlpha=pronto?1:0.75;
+  cx.beginPath();cx.ellipse(sx,p.y+2,58,15,0,-Math.PI/2,-Math.PI/2+6.283*k);cx.stroke();cx.restore();}
 function socoNoChao(p){const t=alvoColado(p);if(t)return startGrabThrow(p,t);startComboHit(p);}
 function startComboHit(p){
   const now=performance.now();
@@ -1663,7 +1780,7 @@ function capangaSet(pi,v){
   return _capSets[chave]={bg:I.bg,port:I.port,idle:fset(ph.idle,t),guard:fset(ph.guard,t)||fset(ph.idle,t),attack:fset(ph.attack,t),
     attack2:fset(ph.attack2,t)||fset(ph.attack,t),attack3:null,taunt:fset(ph.taunt,t)||fset(ph.idle,t),
     idleA:fsA(ph.idleA,t),walkA:fsA(ph.walkA,t),socoA:fsA(ph.socoA,t),chuteA:fsA(ph.chuteA,t),puloA:fsA(ph.puloA,t),danoA:fsA(ph.danoA,t),
-    tauntA:null,mksA:null,victoryA:null,koPose:fset(ph.koPose,t),sizeMul:I.sizeMul};}
+    tauntA:null,mksA:null,victoryA:null,koPose:marcaDeitado(fset(ph.koPose,t),ph),voandoA:fsA(ph.voandoA,t),sentadoA:fsA(ph.sentadoA,t),agarraA:fsA(ph.agarraA,t),rushA:fsA(ph.rushA,t),pancadaA:fsA(ph.pancadaA,t),sizeMul:I.sizeMul};}
 // =====================================================================
 // VETERANOS: viloes das fases ANTERIORES voltam como inimigos comuns nas
 // fases seguintes (fase 1 = so a gangue do chefe; fase 2 = +JAY; fase 3 = +JAY
@@ -1681,30 +1798,103 @@ function qtdVeteranos(qtd){
 }
 function proximoVeterano(){const n=phaseIndex;return n>0?(vetPtr++)%n:null;}
 // fila da onda: veteranos espalhados de forma uniforme entre os capangas
+// ONDA EM PARES: os viloes chegam de 2 em 2, um de cada lado. Cada par = 1 NORMAL + 1 AZUL de
+// personagens DIFERENTES (nunca o normal e o azul do mesmo boneco juntos). Baralho por fase:
+// todo mundo do elenco aparece antes de alguem repetir.
+let _baralho={fase:-1,N:[],B:[]};
+function elencoDaFase(){const o=[];for(const k of tiposDaFase())o.push({tipo:k,id:"t_"+k});
+  for(let i=0;i<phaseIndex;i++)if(P.phases[i]&&IMG.phases[i]&&P.phases[i].name!=="SUPER BOSS")o.push({vet:i,id:"v_"+i});return o;}
+function embaralha(a){for(let i=a.length-1;i>0;i--){const j=(Math.random()*(i+1))|0;const t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function puxaDoBaralho(pilha,elenco,evita){
+  let i=pilha.findIndex(x=>x.id!==evita);
+  if(i<0){const novo=embaralha(elenco.slice());for(const x of novo)pilha.push(x);i=pilha.findIndex(x=>x.id!==evita);}
+  return pilha.splice(i<0?0:i,1)[0];}
 function montaFilaOnda(qtd){
-  const v=qtdVeteranos(qtd),vetPos=new Set();
-  for(let k=0;k<v;k++)vetPos.add(Math.floor((k+0.5)*qtd/v));
-  const fila=[];
-  for(let i=0;i<qtd;i++)fila.push({t:i===0?0.2:(i<4?0.35:0.9),lado:(i%2===0)?1:-1,vet:vetPos.has(i)?proximoVeterano():null});
+  const el=elencoDaFase(),fila=[],gap=mist("parGap",1.5);
+  if(el.length<2){ // sem elenco (dados antigos): onda so com a gangue da fase, como antes
+    for(let i=0;i<qtd;i++)fila.push({t:i===0?0.2:(i<4?0.35:0.9),lado:(i%2===0)?1:-1,vet:null});return fila;}
+  if(_baralho.fase!==phaseIndex)_baralho={fase:phaseIndex,N:[],B:[]};
+  // PADRAO STREETS OF RAGE: o capanga fraco da gangue enche a tela e os especiais vem em pares no meio deles
+  const g=Math.max(0,Math.min(qtd-2,mist("gangue",2)|0)),pares=Math.max(1,Math.ceil((qtd-g)/2));let gPostos=0;
+  for(let k=0;k<pares;k++){
+    const n=puxaDoBaralho(_baralho.N,el,null),b=puxaDoBaralho(_baralho.B,el,n.id),lado=(k%2===0)?1:-1;
+    fila.push({t:k===0?0.2:gap,lado:lado,vet:(n.vet!==undefined?n.vet:null),tipo:n.tipo,azul:false});
+    fila.push({t:0.12,lado:-lado,vet:(b.vet!==undefined?b.vet:null),tipo:b.tipo,azul:true});
+    if(gPostos<g){fila.push({t:0.5,lado:lado,vet:null});gPostos++;}}             // capanga fraco entra entre um par e outro
+  for(;gPostos<g;gPostos++)fila.push({t:0.5,lado:(gPostos%2===0)?1:-1,vet:null});
+  // MINI-CHEFE: na onda do meio da fase, um vilao do elenco vem maior e com mais vida, com letreiro proprio
+  if(mist("miniChefe",1)&&ondas.length>1&&ondaIdx===Math.floor(ondas.length/2)){
+    const n=puxaDoBaralho(_baralho.N,el,null);
+    fila.push({t:gap,lado:1,vet:(n.vet!==undefined?n.vet:null),tipo:n.tipo,azul:false,mini:true});}
   return fila;}
-function novoCapanga(lado,vetPi){
+// =====================================================================
+// VILOES NOVOS (P.tipos) E VERSAO AZUL
+//  - tipos novos entram nas ondas como capangas, cada um com um PERFIL de luta;
+//  - a versao AZUL (tinta do motor) e o mesmo boneco com OUTRO perfil, mesmo nivel
+//    de vida/dano: vale pros tipos novos e pros veteranos (chefes ja vencidos).
+//  - tudo continua corpo a corpo, sempre com aviso antes do golpe.
+// =====================================================================
+const TINTA_AZUL={azul:true};
+const _setsTipo={},_setsAzulFase={};
+function mist(k,d){const m=P.mistura||{};return m[k]!==undefined?m[k]:d;}
+function perfilDe(nome){return (P.perfis&&P.perfis[nome])||{};}
+function setDeTipo(k,azul){const ch=k+(azul?"_a":"");if(_setsTipo[ch])return _setsTipo[ch];
+  const d=P.tipos[k];return _setsTipo[ch]=montaSetVilao(d,azul?TINTA_AZUL:null,d.sizeMul||0.6);}
+function setAzulFase(pi){if(_setsAzulFase[pi])return _setsAzulFase[pi];
+  return _setsAzulFase[pi]=montaSetVilao(P.phases[pi],TINTA_AZUL,IMG.phases[pi].sizeMul||1);}
+function tiposDaFase(){const o=[];if(P.tipos)for(const k in P.tipos)if((P.tipos[k].faseMin||0)<=phaseIndex)o.push(k);return o;}
+function azulLigado(){return true;}
+// baixa/pinta antes da onda chegar (nada disso entra no carregamento inicial)
+function preCarregaTipos(){try{const az=azulLigado();
+  for(const k of tiposDaFase()){setDeTipo(k,false);if(az)setDeTipo(k,true);}
+  if(az)for(let i=0;i<phaseIndex;i++)if(P.phases[i]&&IMG.phases[i])setAzulFase(i);}catch(e){}}
+let tipoPtr=0;
+function viraMini(m){if(!m)return;m.mini=true;m.hp=m.maxhp=Math.round(m.maxhp*mist("miniHp",3));m.sizeMul=(m.sizeMul||1)*1.22;m.dmgMul=(m.dmgMul||1)*1.2;
+  m.nome="CHEFÃO "+m.nome;bannerT=1.8;bannerNome=m.nome;bannerCor="#ff8c1a";AU.power();shake=Math.max(shake,8);}
+// ---------- VIDAS (padrao Streets of Rage) ----------
+// Acabou a vida: perde 1 vida e volta NO MESMO LUGAR, invencivel por um instante, com os viloes jogados pra longe.
+// Sem vidas: tela de derrota, e o CONTINUAR devolve as vidas. Vida extra a cada P.regras.vidaExtraPts pontos.
+function regra(k,d){const r=P.regras||{};return r[k]!==undefined?r[k]:d;}
+let vidas=regra("vidas",3),proxVidaPts=0;
+function perdeVida(){vidas--;const p=player;largaArma(p);p.hpVolta=0;p.cargaT=0;p.hp=p.maxhp;p.downT=0;p.hurtT=0;p.presoT=0;p.paralyzedT=0;p.kbx=0;p.seqHits=0;
+  p.iframes=Math.max(p.iframes||0,1.9);if(p.state==="presa")p.state="idle";
+  timeLeft=99;flashOverlay=Math.max(flashOverlay,0.35);shake=Math.max(shake,14);comboFecha(true);
+  for(const o of alvos()){o.kbx=(Math.sign(o.wx-p.wx)||1)*900;if(o.mook&&o.state!=="dead"&&!o.grabbed){o.state="hurt";o.hurtT=0.7;o.meleeType=null;}}
+  for(let i=0;i<3;i++)rings.push({wx:p.wx,y:p.y,r:20+i*22,t:0.6,c:"#ffcf33"});
+  avisoHUD(vidas>1?("PERDEU 1 VIDA · RESTAM "+vidas):"ÚLTIMA VIDA!");AU.power();}
+function checaVidaExtra(){const passo=regra("vidaExtraPts",20000);if(!(passo>0))return;
+  if(proxVidaPts<=0)proxVidaPts=(Math.floor(score/passo)+1)*passo;
+  if(score>=proxVidaPts){proxVidaPts+=passo;if(vidas<regra("vidasMax",5)){vidas++;avisoHUD("VIDA EXTRA!");AU.power();}}}
+function novoCapanga(lado,f){
+  f=(f&&typeof f==="object")?f:{vet:f};
+  const vetPi=f.vet,azul=!!f.azul;
   const b=curBand(),ehVet=(vetPi!==null&&vetPi!==undefined&&P.phases[vetPi]&&IMG.phases[vetPi]);
+  const tp=(f.tipo&&P.tipos&&P.tipos[f.tipo])?P.tipos[f.tipo]:null;
   const pi=ehVet?vetPi:enemy.pi;
-  const base=CFG.CAPANGA_HP+phaseIndex*4,hp=ehVet?Math.round(base*CFG.VETERANO_HP_MUL):base;
+  const pfNome=tp?(azul?(tp.perfilAzul||"brigao"):(tp.perfil||"brigao")):(ehVet?((azul?mist("azulVeteranos",{}):mist("perfilVeteranos",{}))[P.phases[vetPi].name]||"brigao"):"brigao");
+  const pf=perfilDe(pfNome);
+  const base=CFG.CAPANGA_HP+phaseIndex*4;
+  const hp=Math.round(base*(tp?(tp.hpMul||1.1):(ehVet?CFG.VETERANO_HP_MUL:1))*(pf.hp||1));
   const m=newEnemy(hp,pi,b);
-  if(ehVet){
-    Object.assign(m,{mook:true,vet:true,entered:false,nome:P.phases[vetPi].name,imgSet:null,
-      sizeMul:(IMG.phases[vetPi].sizeMul||1)*0.9,dmMul:0.85,dmgMul:0.7,cd:0.8+Math.random()*0.8,fireCd:1e9,vinilCd:1e9,grabCd:6+Math.random()*4,
-      wx:lado>0?camX+W+90+Math.random()*80:camX-90-Math.random()*60,y:b.top+Math.random()*(b.bottom-b.top),facing:-lado});
+  const comum={mook:true,entered:false,perfil:pf,perfilNome:pfNome,azul:azul,cd:0.8+Math.random()*0.8,fireCd:1e9,vinilCd:1e9,
+    grabCd:(pf.agarra?1.5:6)+Math.random()*4,dmMul:0.85,dmgMul:0.7*(pf.dmg||1),
+    wx:lado>0?camX+W+90+Math.random()*80:camX-90-Math.random()*60,y:b.top+Math.random()*(b.bottom-b.top),facing:-lado};
+  if(tp){
+    Object.assign(m,comum,{tipo:f.tipo,nome:azul?(tp.nomeAzul||(tp.nome+" AZUL")):tp.nome,imgSet:setDeTipo(f.tipo,azul),
+      sizeMul:(tp.sizeMul||0.6)*(0.96+Math.random()*0.06),dmgBase:tp.dmg});
     mooks.push(m);return;}
-  Object.assign(m,{mook:true,entered:false,nome:APELIDOS[(Math.random()*APELIDOS.length)|0],imgSet:capangaSet(pi,(Math.random()*2)|0),
+  if(ehVet){
+    Object.assign(m,comum,{vet:true,nome:P.phases[vetPi].name+(azul?" AZUL":""),imgSet:azul?setAzulFase(vetPi):null,
+      sizeMul:(IMG.phases[vetPi].sizeMul||1)*0.9});
+    mooks.push(m);return;}
+  Object.assign(m,{perfil:perfilDe("brigao"),mook:true,entered:false,nome:APELIDOS[(Math.random()*APELIDOS.length)|0],imgSet:capangaSet(pi,(Math.random()*2)|0),
     sizeMul:(IMG.phases[pi].sizeMul||1)*(0.84+Math.random()*0.08),dmMul:0.8,dmgMul:0.6,cd:0.8+Math.random()*0.8,fireCd:1e9,vinilCd:1e9,grabCd:6+Math.random()*4,
     wx:lado>0?camX+W+90+Math.random()*80:camX-90-Math.random()*60,y:b.top+Math.random()*(b.bottom-b.top),facing:-lado});
   mooks.push(m);}
 function atacantes(e){let n=0;for(const o of alvos())if(o!==e&&(o.state==="windup"||o.state==="attack"))n++;return n;}
-function atualizaOndas(dt){
+function atualizaOndas(dt){checaVidaExtra();
   if(goT>0)goT-=dt;
-  if(spawnFila.length){spawnFila[0].t-=dt;if(spawnFila[0].t<=0){const f=spawnFila.shift();novoCapanga(f.lado,f.vet);}}
+  if(spawnFila.length){spawnFila[0].t-=dt;if(spawnFila[0].t<=0){const f=spawnFila.shift();novoCapanga(f.lado,f);if(f.mini)viraMini(mooks[mooks.length-1]);}}
   if(!waveAtiva&&ondaIdx<ondas.length&&camX>=ondas[ondaIdx].x-2){
     waveAtiva=true;const o=ondas[ondaIdx];spawnFila=[];
     ckpt={onda:ondaIdx,x:o.x,boss:false,score};   // CHECKPOINT: se perder, volta aqui
@@ -1807,7 +1997,7 @@ function updateCombat(dt){est.t+=dt/GAME_SPEED;updatePlayer(dt);updateEnemy(dt);
   if(scene!=="phase")return;
   {const targetCam=Math.max(0,Math.min(camLimite(),CUR_WORLD_LEN-W,player.wx-W*0.36));
    camX=Math.max(camX,camX+(targetCam-camX)*Math.min(1,10*dt));} // scroll so pra frente, estilo Final Fight
-  streamProps();pegaCopos();
+  streamProps();pegaCopos();atualizaArmas(dt);
 }
 function updatePlayer(dt){const p=player;
   if(p.iframes>0)p.iframes-=dt;if(p.flashT>0)p.flashT-=dt;p.skAnim+=dt;
@@ -1823,6 +2013,12 @@ function updatePlayer(dt){const p=player;
       if(alvo){p.dashHit=true;damageEnemy(18,340,0.5,null,alvo);}}
     if(p.dashT<=0)p.skating=false;p.anim+=dt;return;}
   if(p.guardT>0){p.guardT-=dt;if(p.guardT<=0){p.guarding=false;p.guardT=0;}}
+  carregaEspecial(p,dt);
+  if(p.espT>0){p.espT-=dt;p.facing=(Math.floor(p.espT/0.07)%2===0)?1:-1;p.anim+=dt;
+    if(p.espHit<1&&p.espT<0.40){p.espHit=1;golpeEspecial(p);}
+    if(p.espHit<2&&p.espT<0.18){p.espHit=2;golpeEspecial(p);}
+    press.punch=press.kick=press.jump=false;press.jumpTaps.length=0;
+    if(p.espT<=0){p.espT=0;p.facing=p.espFace||1;p.state="idle";}return;}
   // MC NO CHAO: sem controle ate levantar (o manche e os botoes voltam quando ele fica de pe)
   if(p.downT>0){p.downT-=dt;if(p.kbx!==0){applyPropCollision(p,p.kbx*dt);p.kbx*=Math.pow(0.0001,dt);if(Math.abs(p.kbx)<6)p.kbx=0;}clampPlayerX(p);
     press.punch=press.kick=press.jump=false;press.jumpTaps.length=0;p.state="idle";p.anim+=dt;
@@ -1868,12 +2064,15 @@ function updatePlayer(dt){const p=player;
   if(press.kick){press.kick=false;
     const noAr=(p.z>(p.__onProp?p.__onProp.topH:0)+1)||p.vz>0;
     if(noAr)golpeNoAr(p);
-    else if(p.atkT<=0&&p.kickT<=0&&p.throwT<=0){p.comboStep=0;p.bufPunchT=0;p.state="kick";p.kickT=0.34;p.kickHit=false;p.skAnim=0;p.atkId=(p.atkId||0)+1;AU.kickHit();}}
+    else if(p.arma&&p.atkT<=0&&p.kickT<=0&&p.throwT<=0&&!(p.armaT>0))arremessaArma(p);
+    else if(p.atkT<=0&&p.kickT<=0&&p.throwT<=0&&!(p.armaT>0)){p.comboStep=0;p.bufPunchT=0;p.state="kick";p.kickT=0.34;p.kickHit=false;p.skAnim=0;p.atkId=(p.atkId||0)+1;AU.kickHit();}}
   // ===== 👊 SOCO: longe = combo automatico com o skate; colado (X e Y) = agarrao + arremesso =====
   if(press.punch){press.punch=false;
     const noAr=(p.z>(p.__onProp?p.__onProp.topH:0)+1)||p.vz>0;
     if(noAr)golpeNoAr(p);
-    else if(p.atkT<=0&&p.kickT<=0&&p.throwT<=0)socoNoChao(p);
+    else if(p.atkT<=0&&p.kickT<=0&&p.throwT<=0&&!(p.armaT>0)){
+      if(p.arma)balancaArma(p);
+      else{const a=(!alvoColado(p)&&!alvoDoSoco(p))?armaPerto(p):null;if(a)pegaArma(p,a);else socoNoChao(p);}}
     else if(p.atkT>0&&p.atkT<0.22)p.bufPunchT=1;}   // apertou durante o hit: encadeia o proximo automaticamente
   // ===== BUFFER DE PULO (golpe em andamento) =====
   // ⤴️ tocado durante soco/chute/agarrao nao se perde: fica guardado (JUMP_BUFFER_S, tempo real).
@@ -1895,6 +2094,11 @@ function updatePlayer(dt){const p=player;
       else{t.wx=p.wx+p.facing*(40-110*k)*kX();t.z=110*Math.sin(Math.PI*Math.min(1,k*1.1));}
       t.y=p.y;t.facing=-p.facing;t.kbx=0;}
     if(p.throwT<=0){p.throwT=0;soltaArremesso(p);p.state="idle";}
+    p.anim+=dt;return;}
+  // ===== GOLPE DE ARMA =====
+  if(p.armaT>0){p.armaT-=dt;
+    if(!p.armaHit&&p.armaT<0.20&&p.armaT>0.06&&p.arma){p.armaHit=true;golpeDeArma(p);}
+    if(p.armaT<=0){p.armaT=0;p.state="idle";}
     p.anim+=dt;return;}
   // ===== COMBO AUTOMATICO TERRESTRE (3 hits; o ultimo derruba) =====
   if(p.atkT>0){p.atkT-=dt;
@@ -2198,18 +2402,21 @@ function updateEnemy(dt,ent){const e=ent||enemy,p=player;if(e.state==="espera")r
     const floorZ=e.__onProp?e.__onProp.topH:0;
     if(e.z<=floorZ&&e.vz<=0){e.z=floorZ;e.vz=0;
       if(e.derrubado&&e.state!=="dead"){e.derrubado=false;e.deitadoT=CFG.DEITADO_T;e.getupT=CFG.DEITADO_T+CFG.LEVANTA_INVULN;
-        e.state="hurt";e.hurtT=Math.max(e.hurtT||0,CFG.DEITADO_T+0.15);shake=Math.max(shake,5);}}
+        e.state="hurt";e.caiu=true;e.hurtT=Math.max(e.hurtT||0,CFG.DEITADO_T+(((e.imgSet||IMG.phases[e.pi])||{}).sentadoA?0.45:0.15));shake=Math.max(shake,5);}}
   }
   // DEFESA IA: chance aleatória ao receber ataque perto
   if(e.guardT>0){e.guardT-=dt;if(e.guardT<=0){e.guarding=false;e.guardT=0;}}
   if(!e.guarding&&e.state==="approach"&&(player.atkT>0||player.kickT>0)&&e.__guardRoll!==player.atkId){
     e.__guardRoll=player.atkId;
     const primeiroHit=player.kickT>0||player.comboStep<=1; // combo iniciado nao e bloqueado no meio
-    if(primeiroHit&&Math.abs(e.wx-player.wx)<180&&sameLane(e.y,player.y)&&Math.random()<0.25){
+    if(e.perfil&&e.perfil.esquiva&&primeiroHit&&Math.abs(e.wx-player.wx)<200*kX()&&Math.abs(e.y-player.y)<=CFG.PUNCH_RANGE_Y+6&&Math.random()<e.perfil.esquiva){ // ESQUIVA: sai da faixa em vez de defender
+      const bq=curBand(),sg=(e.y-bq.top>bq.bottom-e.y)?-1:1;e.y=Math.max(bq.top,Math.min(bq.bottom,e.y+sg*64));
+      if(e.z<=0&&e.vz===0)e.vz=240;e.cd=Math.max(e.cd||0,0.3);addDmgNum(e.wx,e.y-170,"ESQUIVA!",false,"#5599ff");}
+    else if(primeiroHit&&Math.abs(e.wx-player.wx)<180&&sameLane(e.y,player.y)&&Math.random()<((e.perfil&&e.perfil.guarda)||0.25)){ // MURALHA (so azul) defende muito mais: 🦵 abre a guarda
       e.guarding=true;e.guardT=0.25+Math.random()*0.3;
     }
   }
-  if(e.kbx!==0){e.wx+=e.kbx*dt;e.kbx*=Math.pow(0.0001,dt);if(Math.abs(e.kbx)<6)e.kbx=0;}
+  if(e.kbx!==0){e.wx+=e.kbx*dt*((e.perfil&&e.perfil.peso)||1);e.kbx*=Math.pow(0.0001,dt);if(Math.abs(e.kbx)<6)e.kbx=0;}
   if(!e.entered&&screenX(e.wx)>40&&screenX(e.wx)<W-40)e.entered=true;
   {const minX=e.invasor?150:(e.entered?Math.max(150,camX+60):-1e9);
    const maxX=e.invasor?CUR_WORLD_LEN+400:(e.entered?Math.min(CUR_WORLD_LEN-150,camX+W-60):1e9);
@@ -2222,7 +2429,10 @@ function updateEnemy(dt,ent){const e=ent||enemy,p=player;if(e.state==="espera")r
   if(e.sbParalisiaCd>0)e.sbParalisiaCd-=dt;
   if(e.grabCd>0)e.grabCd-=dt;
   if(e.state==="dead"){e.deadT-=dt;return;}
-  if(e.state==="hurt"){e.hurtT-=dt;if(e.hurtT<=0)e.state="approach";return;}
+  if(e.state==="hurt"){e.hurtT-=dt;if(e.hurtT<=0){e.state="approach";
+      if(e.caiu&&e.mook&&e.perfil&&e.perfil.revide){e.state="windup";e.meleeType='punch';e.windT=Math.max(e.perfil.revide,CFG.TELEGRAPH_FRAMES/60);e.cd=0;
+        rings.push({wx:e.wx,y:e.y-60,r:14,t:e.windT+0.1,c:"#5599ff"});} // LEVANTA BATENDO
+      e.caiu=false;}return;}
   // BRECHA: parado e vulneravel, dando espaco pro heroi atacar
   // a contagem da brecha corre mesmo enquanto o vilao cambaleia (state "hurt")
   if(e.state==="hurt"&&e.vulnT>0){
@@ -2273,27 +2483,41 @@ function updateEnemy(dt,ent){const e=ent||enemy,p=player;if(e.state==="espera")r
         } else abreBrecha(e,cfg,"disco");
       }}
     return;}
-  if(e.state==="approach"){const dx=p.wx-e.wx,dy=p.y-e.y;
+  if(e.state==="approach"){const dx=p.wx-e.wx,dy=p.y-e.y,pf=e.perfil||{},pfA=pf.alcance||0,inv=pf.investida;
+    // PELAS COSTAS (so azul): se esta na frente do MC, da a volta antes de bater. Desiste depois de ~2s pra nao virar danca.
+    if(pf.costas&&Math.sign(e.wx-p.wx)!==p.facing)e.flancoT=0;
+    const flanc=!!pf.costas&&Math.sign(e.wx-p.wx)===p.facing&&Math.abs(dx)<430*kX()&&e.entered!==false&&((e.flancoT=(e.flancoT||0)+dt)<2.2);
     e.esperaVez=!!e.mook&&atacantes(e)>=CFG.MAX_ATACANTES; // no maximo N batendo ao mesmo tempo
     if(tentaSequencia(e,dx))return;
-    if(Math.abs(dx)<=(CFG.ENEMY_HIT_X-5)*kX()&&Math.abs(dy)<=CFG.ENEMY_ATK_Y&&e.cd<=0&&e.entered!==false&&!e.esperaVez){
+    // INVESTIDA (perfil): de media distancia, na mesma faixa, avisa e dispara em linha reta. ⤴️ pula por cima; sair da faixa desvia.
+    if(inv&&e.cd<=0&&e.entered!==false&&!e.esperaVez&&!(e.fogeT>0)&&Math.abs(dy)<=CFG.ENEMY_ATK_Y&&Math.abs(dx)>150*kX()&&Math.abs(dx)<=inv.dist*kX()&&screenX(e.wx)>50&&screenX(e.wx)<W-50){
+      e.state="windup";e.meleeType='rush';e.rushDir=Math.sign(dx)||1;
+      e.windT=Math.max(inv.aviso/Math.max(0.8,dm),CFG.TELEGRAPH_FRAMES/60);
+      for(let i=0;i<2;i++)rings.push({wx:e.wx,y:e.y-60,r:12+i*14,t:e.windT+0.1,c:"#5599ff"});
+      addDmgNum(e.wx,e.y-190,"!",true,"#5599ff");
+    }
+    else if(!flanc&&Math.abs(dx)<=(CFG.ENEMY_HIT_X-5+pfA)*kX()&&Math.abs(dy)<=CFG.ENEMY_ATK_Y&&e.cd<=0&&e.entered!==false&&!e.esperaVez){
       const isBossFight=(e===enemy && P.phases[e.pi] && P.phases[e.pi].chefe);
       e.state="windup";
       // AGARRAO: opcao rara de golpe imbloqueavel, com cooldown proprio (e.grabCd).
       const canGrab=(e.grabCd||0)<=0;
       const pool=canGrab?['jump','punch','kick','grab']:['jump','punch','kick'];
+      if(((e.imgSet||IMG.phases[e.pi])||{}).pancadaA)pool.push('smash'); // PANCADA DE SHAPE (quem tem a arte)
       let mt=pool[Math.floor(Math.random()*pool.length)];
       if(mt==='grab'&&Math.random()>0.4)mt='punch'; // deixa ainda mais raro sem tirar do pool
+      if(pf.golpes&&pf.golpes.length)mt=pf.golpes[Math.floor(Math.random()*pf.golpes.length)];
+      if(pf.agarra&&canGrab&&Math.random()<pf.agarra)mt='grab';
       e.meleeType=mt;
-      if(mt==='grab')e.grabCd=9/dm;
+      if(mt==='grab')e.grabCd=(pf.grabCd||9)/dm;
       if(isBossFight){
         e.windT=(mt==='grab'?1.5:1.1)/dm/furyMul; // telegraph maior pra dar tempo do combo de 3 passos (menor se furioso)
         armBossQTE(e, Math.max(0.9, e.windT-0.15));
       } else {
-        e.windT=(mt==='grab'?0.55:0.34)/dm/furyMul;
+        e.windT=(mt==='grab'?0.55:0.34)/dm/furyMul*(pf.aviso||1);
       }
       e.windT=Math.max(e.windT,CFG.TELEGRAPH_FRAMES/60); // janela limpa pra reagir com 🦵 ou ⤴️⤴️
-      if(mt==='grab'){
+      if(mt==='smash')e.windT=Math.max(e.windT*1.6,0.9); // pancada: aviso longo, golpe forte
+      if(mt==='grab'||mt==='smash'){
         // telegraph proprio, vermelho - golpe imbloqueavel precisa de aviso claro
         for(let i=0;i<3;i++)rings.push({wx:e.wx,y:e.y-60,r:10+i*14,t:e.windT+0.1,c:"#ff3b3b"});
       } else {
@@ -2303,26 +2527,41 @@ function updateEnemy(dt,ent){const e=ent||enemy,p=player;if(e.state==="espera")r
       }
     }
     else{let sp=150*dm*furyMul*(CFG.VEL_MUL_VILAO||1.3);
-      if(e.mook)sp=Math.max(sp,175);          // capanga nunca anda em camera lenta
+      if(e.mook)sp=Math.max(sp,175)*(pf.vel||1)*((pf.furia&&e.hp<=e.maxhp*0.5)?pf.furia:1); // capanga nunca anda em camera lenta
       if(e.entered===false)sp=Math.max(sp,280); // entrando pela borda: chega logo na tela
       // ZIGUEZAGUE 2.5D: longe, aproxima pela diagonal alternando flanco (cima/baixo da calcada);
       // perto, alinha a profundidade pra atacar - sempre com telegraph antes do golpe.
       e.zzT=(e.zzT||0)-dt;
       if(e.zzT<=0){e.flankSide=(e.flankSide===1?-1:1);e.zzT=0.7+Math.random()*0.5;}
       const b=curBand(),amp=Math.min(70,(b.bottom-b.top)*0.4),far=Math.abs(dx)>220;
-      const ty=far?Math.max(b.top,Math.min(b.bottom,p.y+e.flankSide*amp)):p.y;
-      if(e.esperaVez){ // aguardando a vez: cerca a uns 200px, sem colar
+      let ty=far?Math.max(b.top,Math.min(b.bottom,p.y+e.flankSide*amp)):p.y;if(pf.marca)ty=p.y; // MARCACAO: nunca sai da sua faixa
+      if(e.fogeT>0){e.fogeT-=dt;applyPropCollision(e,-Math.sign(dx||1)*sp*dt);} // BATE E FOGE: recua depois do golpe
+      else if(flanc){const tx=p.wx-p.facing*120*kX();                              // PELAS COSTAS: contorna por cima/baixo
+        applyPropCollision(e,Math.sign(tx-e.wx)*sp*1.15*dt);
+        if(pf.salta){if(e.z<=0&&e.vz===0&&Math.abs(e.wx-p.wx)<170*kX())e.vz=pf.salta;}
+        else if(Math.abs(e.wx-p.wx)<110*kX())ty=Math.max(b.top,Math.min(b.bottom,p.y+(e.flankSide||1)*Math.max(34,amp*0.7)));}
+      else if(e.esperaVez){ // aguardando a vez: cerca a uns 200px, sem colar
         const d=Math.abs(dx);
         if(d>230*kX())applyPropCollision(e,Math.sign(dx)*sp*dt);
         else if(d<170*kX())applyPropCollision(e,-Math.sign(dx)*sp*0.6*dt);
-      }else if(Math.abs(dx)>CFG.ENEMY_STOP_DIST*kX()){ // para dentro do alcance do soco do MC
+      }else if(Math.abs(dx)>(CFG.ENEMY_STOP_DIST+pfA)*kX()){ // para dentro do alcance do soco do MC
         const ahead=propUnder(e.wx+Math.sign(dx)*90,e.y);
         if(ahead&&ahead.solidTop&&e.z<=0&&e.vz===0)e.vz=620;
         applyPropCollision(e,Math.sign(dx)*sp*dt);
       }
-      {const py0=e.y,dyT=ty-e.y;e.y+=Math.sign(dyT)*Math.min(Math.abs(dyT),sp*0.8*dt);e.y=Math.max(b.top,Math.min(b.bottom,e.y));bloqueiaY(e,py0);aplicaDegrau(e,py0,true,p.y);}}}
-  else if(e.state==="windup"){e.windT-=dt;if(e.windT<=0){e.state="attack";e.atkT=0.32;e.atkHit=false;}}
-  else if(e.state==="attack"){e.atkT-=dt;
+      {const py0=e.y,dyT=ty-e.y;e.y+=Math.sign(dyT)*Math.min(Math.abs(dyT),sp*0.8*(pf.marca||1)*dt);e.y=Math.max(b.top,Math.min(b.bottom,e.y));bloqueiaY(e,py0);aplicaDegrau(e,py0,true,p.y);}}}
+  else if(e.state==="windup"){e.windT-=dt;if(e.windT<=0){e.state="attack";e.atkT=(e.meleeType==='rush'&&e.perfil&&e.perfil.investida)?e.perfil.investida.dur:0.32;e.atkHit=false;
+      if(e.meleeType==='rush'&&e.perfil&&e.perfil.investida&&e.perfil.investida.salto&&e.z<=0)e.vz=e.perfil.investida.salto;}}
+  else if(e.state==="attack"&&e.meleeType==='rush'){const inv=(e.perfil&&e.perfil.investida)||{vel:600};
+    e.atkT-=dt;e.facing=e.rushDir;applyPropCollision(e,e.rushDir*inv.vel*kX()*dt);
+    if(!e.atkHit&&Math.abs(p.wx-e.wx)<62*kX()&&Math.abs(p.y-e.y)<=CFG.ENEMY_HIT_Y+3&&(inv.salto||(p.z||0)<40)){e.atkHit=true;
+      const phD=P.phases[e.pi],dB=(e.dmgBase!=null)?e.dmgBase:((phD&&phD.dmgSoco!=null)?phD.dmgSoco:3);
+      damagePlayer(Math.max(1,Math.round(dB*(e.dmgMul||1))),e.wx);}
+    if(e.atkT<=0){
+      if(inv.volta&&!e.voltou){e.voltou=true;e.rushDir=Math.sign(p.wx-e.wx)||-e.rushDir;e.state="windup"; // VAI E VOLTA: segunda passada
+        e.windT=Math.max(inv.volta,CFG.TELEGRAPH_FRAMES/60);rings.push({wx:e.wx,y:e.y-60,r:14,t:e.windT+0.1,c:"#5599ff"});}
+      else{e.voltou=false;e.state="approach";e.meleeType=null;e.cd=1.3/dm;}}} // errou ou acertou: fica exposto um instante
+  else if(e.state==="attack"){e.atkT-=dt;const pf=e.perfil||{};
     if(!e.atkHit&&e.atkT<0.22&&e.atkT>0.08){
       const phD=P.phases[e.pi];
       // Pulo usa o mesmo valor de Soco (não tem campo próprio no admin)
@@ -2337,14 +2576,17 @@ function updateEnemy(dt,ent){const e=ent||enemy,p=player;if(e.state==="espera")r
             e.cd=Math.max(e.cd||0,0.6); // errou o agarrao: fica mais exposto
           }else{
             p.guarding=false;p.guardChain=0;p.grinding=false;
-            p.presoT=0.5;p.state="presa";p.mvx=0;p.mvy=0;p.vz=0;p.z=0;
-            p.__grabDmg=Math.max(1,Math.round(dmgSoco*1.6*(e.dmgMul||1)));p.__grabByWx=e.wx;
+            largaArma(p);p.presoT=0.5;p.state="presa";p.mvx=0;p.mvy=0;p.vz=0;p.z=0;
+            p.__grabDmg=Math.max(1,Math.round((e.dmgBase!=null?e.dmgBase:dmgSoco)*1.6*(e.dmgMul||1)));p.__grabByWx=e.wx;
             shake=Math.max(shake,10);AU.hurt();
           }
         }
-      } else if(inReach(e,p,CFG.ENEMY_HIT_X,CFG.ENEMY_HIT_Y+1)){e.atkHit=true;
-        const dmgV=(e.meleeType==='kick')?dmgChute:dmgSoco;
-        damagePlayer(Math.max(1,Math.round(dmgV*(e.dmgMul||1))),e.wx);
+      } else if(inReach(e,p,CFG.ENEMY_HIT_X+(pf.alcance||0),CFG.ENEMY_HIT_Y+1)){e.atkHit=true;
+        const dmgV=(e.dmgBase!=null)?e.dmgBase:((e.meleeType==='kick')?dmgChute:dmgSoco);
+        const smash=e.meleeType==='smash';
+        damagePlayer(Math.max(1,Math.round((smash?Math.max(dmgV*3,(phD&&phD.pancadaDmg)||8):dmgV)*(e.dmgMul||1))),e.wx);
+        if(smash&&player.hurtT>0&&!(player.downT>0)&&scene==="phase"){derrubaMC(e.wx);shake=Math.max(shake,16);}
+        if(pf.empurra&&player.hurtT>0&&!(player.downT>0))player.kbx=(Math.sign(player.wx-e.wx)||1)*pf.empurra; // EMPURRAO: joga o MC longe
       }
     }
     if(e.atkT<=0){
@@ -2352,7 +2594,11 @@ function updateEnemy(dt,ent){const e=ent||enemy,p=player;if(e.state==="espera")r
         const golpeOk=e.bossSeqOK; e.meleeType=null;
         if(golpeOk) abreBrecha(e,{recover:1.4},"melee");
         else{e.state="approach";e.cd=0.55/dm/furyMul;}
-      } else {e.state="approach";e.cd=0.55/dm/furyMul;}
+      } else {e.state="approach";e.cd=0.55/dm/furyMul*(pf.cd||1)/((pf.furia&&e.hp<=e.maxhp*0.5)?pf.furia:1);e.flancoT=0;if(pf.foge){e.fogeT=pf.foge;e.cd=Math.max(e.cd,pf.foge);}
+        // GOLPE DUPLO (so azul): emenda um segundo golpe com aviso curto
+        if(pf.duplo&&(e.duploN||0)<(pf.duploN||1)&&e.meleeType!=='grab'){e.duploN=(e.duploN||0)+1;e.state="windup";e.meleeType=(e.meleeType==='kick')?'punch':'kick';
+          e.windT=Math.max(pf.duplo,CFG.TELEGRAPH_FRAMES/60);e.cd=0;rings.push({wx:e.wx,y:e.y-60,r:14,t:e.windT+0.1,c:"#5599ff"});}
+        else e.duploN=0;}
     }}
   e.prevWx=e.__pw||e.wx;e.__pw=e.wx;}
 
@@ -2444,7 +2690,7 @@ function updateShots(dt){for(const s of shots){s.wx+=s.vx*dt;s.t-=dt;
       v.morto=true;impactBurst(v.wx,v.y-70,"#c9a0ff",false);s.t=0;break;}}}
   shots=shots.filter(s=>s.t>0);}
 // ---------- desenho ----------
-function skIdx(){const S=HIMG();return cyc(S.skate,player.skAnim*((CFG.FPS&&CFG.FPS.skate)||10))||S.jump[0];}
+function skIdx(){const S=HIMG();return cyc(S.skate,player.skAnim*((CFG.FPS&&CFG.FPS.skate)||10)*(player.espT>0?2.2:1))||S.jump[0];}
 function seqFrame(arr,prog){ // prog 0..1 -> índice do frame
   if(!arr||!arr.length)return null;
   const i=Math.min(arr.length-1,Math.max(0,Math.floor((prog||0)*arr.length)));return arr[i];}
@@ -2460,6 +2706,8 @@ function mcFrame(){const p=player,S=HIMG(),F=CFG.FPS||{};
   if(p.grindMode){const q=p.manobra&&MANOBRAS[p.manobra]?S[MANOBRAS[p.manobra].quadro]:null;   // pose da manobra
     if(has(q))return cyc(q,p.skAnim*(F.slide||12));
     return has(S.slide)?cyc(S.slide,p.skAnim*(F.slide||12)):skIdx();}                         // slide
+  if(p.espT>0)return skIdx();                                                                   // giro 360
+  if(p.armaT>0)return seqFrame(S.attack,1-p.armaT/0.32);                                        // golpe de arma
   if(p.atkT>0&&p.atkFinisher)return has(S.comboFinal)?seqFrame(S.comboFinal,1-p.atkT/0.30):skIdx(); // hit final
   if(p.atkT>0)return seqFrame(S.attack,1-p.atkT/0.30);                                           // soco
   if(p.kickT>0)return seqFrame(S.kick,1-p.kickT/0.34);                                           // shuv-it
@@ -2475,12 +2723,22 @@ function mcFrame(){const p=player,S=HIMG(),F=CFG.FPS||{};
   if(p.state==="run")return cyc(S.run,p.anim*(F.run||12));
   return cyc(S.idle,p.anim*(F.idle||4));
 }
+function arrGolpe(e,S){const m=e.meleeType;
+  if(m==='grab'&&S.agarraA)return S.agarraA;
+  if(m==='rush')return S.rushA||S.chuteA||S.socoA;
+  if(m==='smash'&&S.pancadaA)return S.pancadaA;
+  return (m==='kick')?S.chuteA:(m==='jump'?(S.puloA||S.socoA):S.socoA);}
 function enFrame(ent){const e=ent||enemy,S=e.imgSet||IMG.phases[e.pi];
   const anim=!!S.walkA; // vilão animado quadro-a-quadro?
   if(e.state==="dead"&&S.koPose)return S.koPose[0];
+  if(e.state!=="dead"){
+    if(e.z>0&&(e.flyT>0||e.derrubado)&&S.voandoA)return S.voandoA[0];                 // arremessado / derrubado no ar
+    if(e.deitadoT>0&&S.koPose&&S.koPose[0].deitadoArt)return S.koPose[0];            // caido (arte ja deitada)
+    if(e.caiu&&e.state==="hurt"&&!(e.deitadoT>0)&&S.sentadoA)return seqFrame(S.sentadoA,1-Math.max(0,e.hurtT)/0.3); // levantando
+  }
   if(e.state==="attack"){
     if(e.meleeType && anim){
-      const arr=(e.meleeType==='kick')?S.chuteA:(e.meleeType==='jump'?(S.puloA||S.socoA):S.socoA);
+      const arr=arrGolpe(e,S);
       return seqFrame(arr,1-e.atkT/0.32);
     }
     if(anim){
@@ -2496,7 +2754,7 @@ function enFrame(ent){const e=ent||enemy,S=e.imgSet||IMG.phases[e.pi];
     return S.idle[0];}
   if(e.state==="windup"){
     if(e.meleeType && anim){
-      const arr=(e.meleeType==='kick')?S.chuteA:(e.meleeType==='jump'?(S.puloA||S.socoA):S.socoA);
+      const arr=arrGolpe(e,S);
       return arr[0];
     }
     return anim?S.socoA[0]:S.guard[0];
@@ -2548,7 +2806,8 @@ function drawAlinhamento(){
 // MC com fantasma translucido enquanto os i-frames do Salto de Fuga estao ativos
 function drawPlayerActor(){const p=player;
   if(p.isInvincible){cx.save();cx.globalAlpha=(performance.now()%120<60)?0.45:0.8;drawActor(p,mcFrame(),p.z,false);cx.restore();}
-  else drawActor(p,mcFrame(),p.z,false);}
+  else drawActor(p,mcFrame(),p.z,false);
+  drawArmaNaMao(p);drawCargaEspecial(p);}
 function drawShadow(sx,y,sc,z){const w=112*sc*(1-Math.min(z/260,0.4));cx.save();
   cx.globalAlpha=0.32*(1-Math.min(z/300,0.6));cx.fillStyle="#000";cx.beginPath();
   cx.ellipse(sx,y,w*0.5,14*sc,0,0,6.283);cx.fill();cx.restore();}
@@ -2563,7 +2822,7 @@ function drawActor(a,fr,z,dead){if(!fr||!fr.img)return;
   z=(z||0)*kZ();
   const sc=dscale(a.y)*escalaChar()*porte,dw=fr.w*sc,dh=fr.h*sc,sx=screenX(a.wx),dx=sx-dw/2,dy=(a.y-z)-dh;
   drawShadow(sx,a.y,sc,z);cx.save();
-  const deitado=(a.downT>0)||(a.deitadoT>0&&a.state!=="dead");
+  const deitado=((a.downT>0)||(a.deitadoT>0&&a.state!=="dead"))&&!fr.deitadoArt;
   {const agora=performance.now(),zAnt=a._pz||0;
     if(zAnt>6&&z<=0)a._sqT=agora;                       // acabou de pousar
     const subindo=z>zAnt+0.5;a._pz=z;
@@ -2714,10 +2973,14 @@ function drawCombatHUD(dt){const ph=P.phases[enemy.pi];
   cx.fillStyle="rgba(6,4,10,.62)";cx.fillRect(0,0,W,84);cx.fillStyle="#000";cx.fillRect(0,84,W,3);
   cx.fillStyle="#1a1414";cx.fillRect(20,10,58,58);cx.strokeStyle=HERO().accent;cx.lineWidth=3;cx.strokeRect(20,10,58,58);
   {const hp=HERO().port();if(hp&&hp.ok)try{cx.drawImage(hp,23,13,52,52);}catch(e){}}
-  {const lowHP=player.hp/player.maxhp<0.25;bar(88,14,360,16,player.hp/player.maxhp,(lowHP&&performance.now()%400<200)?"#ff5a3c":"#2ec27e","#7be0a8","l");}
+  {const lowHP=player.hp/player.maxhp<0.25;bar(88,14,360,16,player.hp/player.maxhp,(lowHP&&performance.now()%400<200)?"#ff5a3c":"#2ec27e","#7be0a8","l");
+   if(player.hpVolta>0){const x0=88+360*Math.max(0,player.hp/player.maxhp),wv=360*Math.min(player.hpVolta,player.maxhp-player.hp)/player.maxhp; // vida em aberto do especial
+     cx.fillStyle="#bff5d6";cx.globalAlpha=0.55+0.25*Math.sin(performance.now()/180);cx.fillRect(x0,14,wv,16);cx.globalAlpha=1;}}
   cx.textAlign="left";cx.textBaseline="alphabetic";cx.fillStyle="#ffcf33";
   cx.font='10px "Press Start 2P",monospace';cx.fillText(HERO().title,88,44);
   cx.fillStyle="#ffe36a";cx.font='12px "Press Start 2P",monospace';cx.fillText("★ "+String(score).padStart(7,"0"),88,66);
+  {const ta=cx.textAlign;cx.textAlign="left";cx.fillStyle="#ff6a5a";cx.font='10px "Press Start 2P",monospace';cx.fillText("VIDAS x"+vidas,222,66);
+   if(player.arma&&P.armas[player.arma.k]){cx.fillStyle="#ffcf33";cx.fillText(P.armas[player.arma.k].nome+" x"+player.arma.usos,222,84);}cx.textAlign=ta;}
   cx.textAlign="center";cx.fillStyle="#000";cx.fillRect(W/2-40,8,80,46);cx.strokeStyle="#ffcf33";cx.lineWidth=2;cx.strokeRect(W/2-40,8,80,46);
   cx.fillStyle="#ffcf33";cx.font='9px "Press Start 2P",monospace';cx.fillText("TEMPO",W/2,21);
   cx.font='22px "Press Start 2P",monospace';cx.fillStyle=(timeLeft<=10)?((performance.now()%500<250)?"#ff3c3c":"#ffd0d0"):"#fff";cx.fillText(String(timeLeft).padStart(2,"0"),W/2,48);
@@ -2781,7 +3044,24 @@ function drawCarroFundo(){
 // =====================================================================
 const POSTE_EIXO=0.30,POSTE_LAMP_X=0.887,POSTE_LAMP_Y=0.049; // eixo do poste e lampada na imagem
 let postes=[],faiscas=[],_posteT=performance.now();
-function montaPostes(){
+// OUTDOOR: propaganda no fundo da fase (atras dos personagens), longe das emendas dos postes
+IMG.outdoor=((P.outdoor&&P.outdoor.imgs)||[]).map(o=>({img:mkImgLazy(o.src),w:o.w,h:o.h}));
+let outdoorX=[];
+function montaOutdoor(){outdoorX=[];if(!IMG.outdoor.length)return;const em=(P.phases[phaseIndex]||{}).emendas||[];
+  const len=(P.phases[phaseIndex]||{}).faseLen||CUR_WORLD_LEN;let melhor=0.5,md=-1;
+  for(const f of [0.5,0.4,0.6,0.3,0.7]){const x=len*f;let dmin=1e9;for(const e of em)dmin=Math.min(dmin,Math.abs(e-x));if(dmin>340){melhor=f;break;}if(dmin>md){md=dmin;melhor=f;}}
+  const fixo=(P.outdoor.pos||{})[(P.phases[phaseIndex]||{}).name];if(fixo!==undefined)melhor=fixo; // posicao escolhida a mao pra fase (0 a 1)
+  outdoorX=[Math.round(len*melhor)];const im=IMG.outdoor[phaseIndex%IMG.outdoor.length];if(im.img._carregar)im.img._carregar();}
+function drawOutdoor(){const O=P.outdoor;if(!O||!outdoorX.length)return;const im=IMG.outdoor[phaseIndex%IMG.outdoor.length];if(!im||!im.img.ok)return;
+  const b=curBand(),base=b.top+2;let Wd=O.largura||380,Hd=Wd*im.h/im.w;
+  const perna=Math.max(46,Math.min(O.perna||170,base-132-Hd)),top=base-perna-Hd;
+  for(const wx of outdoorX){const sx=screenX(wx);if(sx<-Wd||sx>W+Wd)continue;const x0=Math.round(sx-Wd/2);
+    cx.save();cx.fillStyle="#14161d";cx.fillRect(x0+Wd*0.16,top+Hd-2,7,perna+4);cx.fillRect(x0+Wd*0.84-7,top+Hd-2,7,perna+4);
+    cx.fillStyle="#232733";cx.fillRect(x0-4,top-4,Wd+8,Hd+8);
+    try{cx.drawImage(im.img,x0,top,Wd,Hd);}catch(e){}
+    cx.globalCompositeOperation="lighter";cx.globalAlpha=0.10+0.05*Math.sin(performance.now()/420);cx.fillStyle="#ffd98a";cx.fillRect(x0-4,top-4,Wd+8,Hd+8);
+    cx.restore();}}
+function montaPostes(){montaOutdoor();
   const ph=P.phases[phaseIndex]||{},em=ph.emendas||[];
   postes=em.map(x=>({x,defeito:false,aceso:true,t:0}));faiscas=[];
   if(postes.length&&Math.random()<CFG.POSTE_DEFEITO_CHANCE)postes[(Math.random()*postes.length)|0].defeito=true;}
@@ -2859,18 +3139,20 @@ function drawPhase(dt){drawPhaseBg();
   cx.save();if(shake>0)cx.translate((Math.random()-.5)*shake,(Math.random()-.5)*shake);
   drawAlinhamento();
   drawCarroFundo();
-  drawPostesEmenda(true);   // poste + brilho da lampada (atras dos personagens)
+  drawOutdoor();drawPostesEmenda(true);   // poste + brilho da lampada (atras dos personagens)
   drawPisoRolando();
   // PROFUNDIDADE 2.5D: props, MC, chefe, invasor e capangas ordenados pelo Y da calcada
   const L=[];
   for(const pr of track)L.push([pr.y,"pr",pr]);
+  for(const a of armasChao)L.push([a.y-0.3,"ar",a]);for(const a of armasVoando)L.push([a.y+0.6,"ar",a]);
   L.push([player.y+0.5,"p"]);
   if(enemy.state!=="espera")L.push([enemy.y+0.5,"e"]);
   if(invader)L.push([invader.y+0.5,"i"]);
   for(const m of mooks)L.push([m.y+0.5,"m",m]);
   L.sort((a,b)=>a[0]-b[0]);
   for(const[,who,o]of L){
-    if(who==="pr")drawProp(o);
+    if(who==="ar")drawArmaChao(o);
+    else if(who==="pr")drawProp(o);
     else if(who==="p")drawPlayerActor();
     else if(who==="e")drawActor(enemy,enFrame(enemy),enemy.z||0,enemy.state==="dead");
     else if(who==="m")drawActor(o,enFrame(o),o.z||0,o.state==="dead");
