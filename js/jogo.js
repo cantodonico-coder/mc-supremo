@@ -1905,7 +1905,9 @@ function atacantes(e){let n=0;for(const o of alvos())if(o!==e&&(o.state==="windu
 //  - os que esperam ficam num ANEL em volta, cada um na sua distancia e faixa, sem empilhar.
 // =====================================================================
 function organizaCerco(dt){const p=player,V=mooks.filter(m=>m.state!=="dead"&&!m.grabbed);
-  for(const m of V){if(m.descansoT>0)m.descansoT-=dt;m.ladoCerco=(m.wx>=p.wx)?1:-1;}
+  for(const m of V){if(m.descansoT>0)m.descansoT-=dt;m.ladoCerco=(m.wx>=p.wx)?1:-1;
+    const sx=screenX(m.wx);m.foraT=(sx<-40||sx>W+40)?(m.foraT||0)+dt:0;     // preso fora da tela (atras de objeto etc.): entra pela borda
+    if(m.foraT>4){m.wx=sx<0?camX+70:camX+W-70;m.foraT=0;m.entered=true;}}
   const poucos=V.length<=2;                                          // sobrando 1 ou 2: nao tem quem reveze, eles nao descansam
   const livre=m=>(poucos||!(m.descansoT>0));
   const dist=m=>Math.abs(m.wx-p.wx)-(m.engajado?140:0);            // quem ja esta na briga tende a continuar
@@ -1931,7 +1933,7 @@ function atualizaOndas(dt){checaVidaExtra();
     // chegam em grupos: primeiro 2 de cada lado, depois reforcos em sequencia
     spawnFila=montaFilaOnda(o.qtd); // capangas da fase + veteranos das fases anteriores
     avisoHUD("CAPANGAS!");AU.chargeSfx&&AU.chargeSfx(0.5);}
-  if(waveAtiva&&!spawnFila.length&&mooks.length===0){
+  if(waveAtiva&&!spawnFila.length&&!mooks.some(m=>m.state!=="dead")){
     waveAtiva=false;ondaIdx++;goT=2.8;timeLeft=99;AU.power();}
   if(!bossSpawned&&ondaIdx>=ondas.length&&!waveAtiva&&camX>=CUR_WORLD_LEN-W-4){
     bossSpawned=true;const b=curBand();
@@ -2076,7 +2078,7 @@ function updatePlayer(dt){const p=player;
   // ===== AGARRAO: SEGURANDO O VILAO =====
   if(p.segT>0){const t=p.throwTgt;
     p.segT-=dt/GAME_SPEED;if(p.joelhaT>0)p.joelhaT-=dt;
-    if(!t||t.state==="dead"||!t.grabbed){p.segT=0;p.throwTgt=null;p.state="idle";}
+    if(!t||t.state==="dead"||!t.grabbed){if(t&&t.state==="dead")t.grabbed=false;p.segT=0;p.throwTgt=null;p.state="idle";}
     else{
       t.wx=p.wx+p.facing*38*kX();t.y=p.y;t.z=0;t.kbx=0;t.facing=-p.facing;
       const ax=keys.ax||((keys.right?1:0)-(keys.left?1:0)),dirX=ax*p.facing;
@@ -2423,6 +2425,7 @@ function updateEnemy(dt,ent){const e=ent||enemy,p=player;if(e.state==="espera")r
   const furyMul=(isBossHere&&e.enraged)?1.35:(isBossHere&&e.furyStage1)?1.15:1;
   if(e.flashT>0)e.flashT-=dt;
   if(e.deitadoT>0)e.deitadoT-=dt;if(e.getupT>0)e.getupT-=dt;
+  if(e.grabbed&&e.state==="dead")e.grabbed=false;           // morreu no agarrao: solta (senao ficava pra sempre e a onda nao acabava)
   if(e.grabbed){e.kbx=0;e.vz=0;e.anim+=dt;return;} // preso no agarrao do MC
   // ARREMESSADO vira projetil: derruba quem estiver no caminho (Final Fight)
   if(e.flyT>0){e.flyT-=dt;
