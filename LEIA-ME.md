@@ -214,3 +214,10 @@ O jogo tem manifesto (`manifest.webmanifest`) e ícones em `assets/ui/icone-*.pn
 - **Quase sem encolher no fundo**: 92% no fundo da calçada, 100% na frente (antes 70% a 103%).
 - **Faixa de andar rasa**: no máximo 210 px de profundidade, para ninguém "subir" para o fundo do cenário. Trensurb e Palco Final ficam como estavam por causa do degrau.
 - Ajuste em `P.regras` no `js/dados.js`: `escalaBonecos`, `escalaFundo`, `escalaFrente`, `faixaMax`. Apague `escalaBonecos` para voltar a usar a escala do Admin.
+
+## Modo palito (protótipo)
+
+- Bonecos desenhados por código, com animação completa: remar, parado, soco em tempos, chute, voadora, agarrão, apanhar, voar, cair, sentar, golpes e avisos dos vilões.
+- Liga e desliga no menu de pausa (⏸ → MODO PALITO), ou abrindo o jogo com `?palito=1` / `?palito=0`. Fica lembrado no aparelho.
+- Mesmo tamanho e mesmas áreas de acerto da arte: dá para voltar à arte a qualquer momento sem mudar a dificuldade.
+- Herói com contorno dourado; versão azul em azul; mini-chefe com coroa; FACA com faca na mão.
