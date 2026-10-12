@@ -2857,9 +2857,10 @@ function kZ(){return (CFG.ESCALA_ALTURA||1.6)*fatorObjetos();}
 // pra acertar o jogo antes da arte final. Liga/desliga no menu de pausa ou com ?palito=1 / ?palito=0.
 // Mesmo tamanho e mesmas areas de acerto dos bonecos com arte.
 // =====================================================================
-let _palito=false;
-try{const q=new URLSearchParams(location.search).get("palito");if(q==="1"||q==="0")localStorage.setItem("mcs_palito",q);_palito=localStorage.getItem("mcs_palito")==="1";}catch(e){}
-function palitoAtivo(){return _palito;}
+var _palito=null; // lido na primeira consulta (o botao da pausa e criado antes deste trecho rodar)
+function palitoAtivo(){if(_palito===null){_palito=false;
+  try{const q=new URLSearchParams(location.search).get("palito");if(q==="1"||q==="0")localStorage.setItem("mcs_palito",q);_palito=localStorage.getItem("mcs_palito")==="1";}catch(e){}}
+  return _palito;}
 function setPalito(v){_palito=!!v;try{localStorage.setItem("mcs_palito",v?"1":"0");}catch(e){}}
 const PAL_TIPO={laranja:{c:"#ff8c1a",ch:"bone",ac:"#222"},regata:{c:"#f06a1a",ch:"bone",ac:"#2a4fd6"},faca:{c:"#e8742a",ch:"bandana",ac:"#f2c230",faca:1},colete:{c:"#3f7a3a",ch:"bone",ac:"#222"}};
 function corPalito(a){
