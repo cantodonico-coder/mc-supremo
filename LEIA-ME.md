@@ -229,3 +229,4 @@ O jogo tem manifesto (`manifest.webmanifest`) e ícones em `assets/ui/icone-*.pn
 - **A esteira das garrafas é um degrau de slide** (`degrau` da fase em `js/dados.js`: `yPlat` 470 = topo da esteira, `yRua` 590 = pé dela, de `xIni` 410 a `xFim` 2090).
   - **Subir:** encoste na esteira (manche para cima) e pule com o manche para cima.
   - **Slide:** pule, aperte 🦵 (voadora) e segure 🦵 até pousar encostado na esteira. Ele desliza por cima das garrafas até soltar o 🦵 ou a esteira acabar.
+- **Objetos da cervejaria** (`assets/props/cervejaria/`, recortados da folha de peças Copo Vazio): engradados e sacos de malte no lugar da caixa de som (quebráveis), barris de inox e madeira no lugar do latão (quebráveis, com slide em cima), esteiras soltas no lugar do banco (slide em cima). A lista fica em `P.objetosFase` no fim de `js/dados.js`. Para dar arte própria a outra fase, crie uma entrada com o nome do chefe.

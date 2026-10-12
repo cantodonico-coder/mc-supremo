@@ -608,7 +608,8 @@ function buildTrack(band){
   const k=(CFG.ESCALA_PROPS||1)*fatorObjetos(),iniX=520,fimX=CUR_WORLD_LEN-360;
   const livre=(x,dist)=>q.every(o=>Math.abs(o.wx-x)>dist);
   const sorteiaX=(dist)=>{for(let t=0;t<30;t++){const x=iniX+Math.random()*(fimX-iniX);if(livre(x,dist))return x;}return null;};
-  if(Math.random()<CFG.PROPS_CHANCE_FASE){
+  const _skinF=(P.objetosFase||{})[(P.phases[phaseIndex]||{}).name]||null; // arte propria da fase (ex.: cervejaria)
+  if(Math.random()<CFG.PROPS_CHANCE_FASE||(_skinF&&_skinF.sempre)){
     const qtd=CFG.PROPS_MIN+Math.floor(Math.random()*(CFG.PROPS_MAX-CFG.PROPS_MIN+1));
     const pesos=[["banco",CFG.PESO_BANCO],["caixa",CFG.PESO_CAIXA],["latao",CFG.PESO_LATAO]],soma=pesos.reduce((a,p)=>a+p[1],0);
     for(let i=0;i<qtd;i++){
@@ -620,6 +621,9 @@ function buildTrack(band){
         const wArte=ci&&ci.w?Math.round(top_*kZ()/(cx_?0.95:0.98)*ci.w/ci.h*0.85):0;
         q.push({type:cx_?"caixa":"latao",grind:!cx_,wx:x,w:wArte||Math.round((cx_?96:74)*k),h:Math.round((cx_?110:90)*k),topH:top_,solidTop:true,breakable:true,
           hp:CFG.OBST_HP,maxhp:CFG.OBST_HP,y:yy,dmg:0,smokeT:0,flashT:0});}}}
+  if(_skinF)for(const o of q){const l=_skinF[o.type];if(!l||!l.length||o.fixo)continue; // troca a arte e ajusta a largura de colisao
+    const sk=l[Math.floor(Math.random()*l.length)];o.skin={img:imgSkin(sk.src),topo:sk.topo};
+    const H=o.topH*kZ()/sk.topo;o.w=Math.round(H*sk.w/sk.h*0.85);}
   // COPOS DE CURA: sorteio proprio (a cura nao pode depender da sorte dos objetos)
   {const nc=CFG.COPOS_MIN+Math.floor(Math.random()*(CFG.COPOS_MAX-CFG.COPOS_MIN+1));
    for(let i=0;i<nc;i++){const x=sorteiaX(160);if(x===null)break;
@@ -3025,7 +3029,9 @@ function drawPropImg(pr,sx,im,alturaTela,ratioTopo){
     cx.moveTo(x0+Wd*0.3,top+H*0.2);cx.lineTo(x0+Wd*0.45,top+H*0.45);cx.lineTo(x0+Wd*0.38,top+H*0.7);
     if(pr.dmg>=2){cx.moveTo(x0+Wd*0.7,top+H*0.3);cx.lineTo(x0+Wd*0.58,top+H*0.55);cx.lineTo(x0+Wd*0.68,top+H*0.9);}cx.stroke();}
   cx.restore();}
-function drawBanco(pr,sx,sc){
+const _skins={};function imgSkin(src){return _skins[src]||(_skins[src]=mkImg(src));}
+function drawSkin(pr,sx){const sk=pr.skin;if(!sk||!sk.img||!sk.img.ok)return false;drawPropImg(pr,sx,sk.img,pr.topH*kZ(),sk.topo);return true;}
+function drawBanco(pr,sx,sc){if(drawSkin(pr,sx))return;
   {const im=IMG.props.banco;if(im&&im.img&&im.img.ok){drawPropImg(pr,sx,im.img,pr.topH*kZ(),0.5);return;}} // assento = metade da altura do desenho
   const w=pr.w*sc,top=pr.y-pr.topH*kZ(),x0=sx-w/2,ferro="#1f5a3a",ferroL="#2f7a52",mad="#8a5a2b",madL="#b07a40";
   drawShadow(sx,pr.y,sc*1.6,0);
@@ -3038,7 +3044,7 @@ function drawBanco(pr,sx,sc){
   cx.fillStyle=madL;cx.fillRect(x0,top-4*sc,w,3*sc);
   cx.fillStyle=ferroL;cx.fillRect(x0-2*sc,top-10*sc,8*sc,16*sc);cx.fillRect(x0+w-6*sc,top-10*sc,8*sc,16*sc);
   cx.restore();}
-function drawObst(pr,sx,sc){
+function drawObst(pr,sx,sc){if(drawSkin(pr,sx))return;
   {const im=pr.type==="caixa"?IMG.props.caixaSom:IMG.props.lixeira;
    if(im&&im.img&&im.img.ok){drawPropImg(pr,sx,im.img,pr.topH*kZ(),pr.type==="caixa"?0.95:0.98);return;}}
   const w=pr.w*sc,top=pr.y-pr.topH*kZ(),x0=sx-w/2,h=pr.topH*kZ(),tilt=pr.dmg>=2?0.05:0;
