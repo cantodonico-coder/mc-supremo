@@ -1546,7 +1546,7 @@ function drawArmaChao(a){const sx=screenX(a.wx);if(sx<-200||sx>W+200)return;cons
   const w=im.w*sc,h=im.h*sc,t=performance.now();drawShadow(sx,a.y,sc*0.7,0);
   cx.save();cx.globalAlpha=0.45+0.4*Math.sin(t/220);cx.strokeStyle="#ffcf33";cx.lineWidth=2;cx.beginPath();cx.ellipse(sx,a.y,w*0.56,8,0,0,6.283);cx.stroke();cx.restore();
   try{cx.drawImage(im.img,sx-w/2,a.y-h-3+Math.sin(t/260+a.wx)*2,w,h);}catch(e){}}
-function drawArmaNaMao(p){if(!p.arma||p.downT>0||scene==="bonus"&&false)return;const fr=HIMG().idle[0];
+function drawArmaNaMao(p){if(!p.arma||p.downT>0||palitoAtivo())return; // no palito a arma vai na mao (drawPalito)const fr=HIMG().idle[0];
   const H=fr.h*dscale(p.y)*escalaChar()*(p.sizeMul||1),sx=screenX(p.wx),z=(p.z||0)*kZ();
   let ang=-1.15;if(p.armaT>0){const k=1-p.armaT/0.32;ang=-2.1+k*2.8;}
   desenhaArmaSprite(p.arma.k,sx+p.facing*H*0.17,p.y-z-H*0.52,escalaArma(p.y),ang,p.facing<0);}
@@ -2882,9 +2882,13 @@ function posePalito(a){
     P0.hip=0.45+0.008*Math.sin(t*3);
     if(p.presoT>0||p.state==="presa"){P0.lean=-12;P0.aF=[5,10];P0.aB=[5,10];return P0;}
     if(p.hurtT>0){P0.lean=-22;P0.aF=[-40,-20];P0.aB=[-25,-30];P0.head=-12;return P0;}
-    if(p.espT>0){P0.hip=0.42;P0.aF=[95,0];P0.aB=[-95,0];P0.lean=0;return P0;}
+    if(p.espT>0){P0.hip=0.40;P0.lean=0;P0.giro=1;P0.fF=[0.12,-0.03];P0.fB=[-0.12,-0.03];return P0;}
     if(p.segT>0||p.throwT>0){const k=p.throwT>0?1-p.throwT/CFG.THROW_T:0;P0.lean=12-k*30;P0.aF=[80+k*90,10];P0.aB=[75+k*90,20];if(p.joelhaT>0){P0.fF=[0.16,-0.18];}return P0;}
-    if(p.armaT>0){const k=1-p.armaT/0.32;P0.lean=mix(-8,16,k);P0.aF=[mix(165,70,cl(k*1.6)),0];P0.aB=[mix(150,60,k),20];return P0;}
+    if(p.armaT>0){const k=1-p.armaT/0.32;let a1;
+      if(k<0.35){const q=k/0.35;a1=mix(110,195,q);P0.lean=mix(0,-14,q);}            // preparo: arma vai pra tras da cabeca
+      else if(k<0.6){const q=(k-0.35)/0.25;a1=mix(195,55,q*q);P0.lean=mix(-14,20,q);P0.swoosh=q;} // golpe rapido
+      else{a1=mix(55,40,(k-0.6)/0.4);P0.lean=20;}                                   // acompanhamento
+      P0.aF=[a1,-12];P0.aB=[a1-14,-8];P0.hip=0.42;P0.fF=[0.13,0];return P0;}
     if(p.atkT>0){const k=1-p.atkT/0.30,hit=cl((k-0.25)/0.3),frente=(p.comboStep%2)!==0;
       if(p.atkFinisher){P0.lean=mix(8,-6,hit);P0.hip=0.42+0.06*hit;P0.aF=[mix(20,170,hit),mix(-90,0,hit)];P0.aB=[10,60];return P0;}
       const soco=[mix(-25,92,hit),mix(-80,0,hit)],guard=[25,75];P0.lean=mix(-4,16,hit);
@@ -2935,7 +2939,8 @@ function drawPalito(a,sx,base,H){
   let gy=base;if(C.skate)gy=base-H*0.065;
   cx.save();cx.lineCap="round";cx.lineJoin="round";
   if(po.lying){cx.translate(sx,base);cx.rotate(-Math.PI/2);cx.translate(-sx,-base+H*0.12);}
-  if(C.skate){const w=H*0.42;cx.fillStyle=branco?"#fff":"#7a4a22";cx.strokeStyle=out;cx.lineWidth=3;
+  const giro=po.giro&&a===player;
+  if(C.skate&&!giro){const w=H*0.42;cx.fillStyle=branco?"#fff":"#7a4a22";cx.strokeStyle=out;cx.lineWidth=3;
     cx.beginPath();cx.roundRect?cx.roundRect(sx-w/2,gy+H*0.012,w,H*0.028,H*0.014):cx.rect(sx-w/2,gy+H*0.012,w,H*0.028);cx.fill();cx.stroke();
     cx.fillStyle="#222";for(const k of[-0.3,0.3]){cx.beginPath();cx.arc(sx+w*k,base-H*0.016,H*0.018,0,6.283);cx.fill();}}
   let hx=sx,hy=gy-po.hip*H;
@@ -2960,7 +2965,24 @@ function drawPalito(a,sx,base,H){
       cx.fillStyle=ac;cx.beginPath();cx.arc(hcx,hcy-hr*0.35,hr*0.95,Math.PI,0);cx.fill();}
     else if(C.ch==="oculos"){cx.strokeStyle="#111";cx.lineWidth=2.5;cx.strokeRect(hcx+hr*0.15,hcy-hr*0.32,hr*0.55,hr*0.38);cx.fillStyle="#5a3a22";cx.beginPath();cx.arc(hcx-hr*0.1,hcy-hr*0.35,hr*0.95,Math.PI,0);cx.fill();}
     else if(C.ch==="coroa"){cx.fillStyle="#ffcf33";cx.beginPath();cx.moveTo(hcx-hr,hcy-hr*0.6);for(let i=0;i<=4;i++)cx.lineTo(hcx-hr+i*hr*0.5,hcy-hr*(i%2?1.0:1.7));cx.lineTo(hcx+hr,hcy-hr*0.6);cx.fill();}}
-  const mf=braco(po.aF,col);
+  let mf;
+  if(giro){ // GIRO 360: skate na mao, bracos esticados girando em volta do corpo
+    const prog=1-Math.max(0,a.espT)/0.5,th=prog*Math.PI*3,fz=a.facing||1,ombY=shy+H*0.04;
+    const cxh=Math.cos(th)*fz,syh=Math.sin(th);
+    const hx1=shx+cxh*LA*1.85,hy1=ombY+syh*H*0.035,hx2=shx+cxh*LA*1.55,hy2=ombY+H*0.05+syh*H*0.03;
+    cx.save();cx.globalAlpha=0.55;cx.strokeStyle="#ffcf33";cx.lineWidth=H*0.03;cx.beginPath();cx.ellipse(shx,ombY+H*0.02,LA*2.3,H*0.09,0,0,6.283);cx.stroke();cx.restore();
+    seg([shx,ombY,hx2,hy2],lw*0.85,shade(col));seg([shx,ombY,hx1,hy1],lw*0.85,col);
+    const dw=H*0.42*Math.max(0.18,Math.abs(cxh)),dx0=hx1+cxh*dw*0.05;
+    cx.fillStyle=branco?"#fff":"#7a4a22";cx.strokeStyle=out;cx.lineWidth=3;cx.beginPath();
+    cx.rect(Math.min(dx0,dx0+cxh*dw),hy1-H*0.016,Math.abs(cxh*dw)||2,H*0.03);cx.fill();cx.stroke();
+    cx.fillStyle=pele;for(const[q,r2]of[[hx1,hy1],[hx2,hy2]]){cx.beginPath();cx.arc(q,r2,lw*0.62,0,6.283);cx.fill();cx.stroke();}
+    mf=[shx,ombY,hx1,hy1];}
+  else mf=braco(po.aF,col);
+  // ARMA presa na mao do palito (gira junto com o antebraco)
+  if(a===player&&a.arma&&!giro&&P.armas&&P.armas[a.arma.k]){const ang=Math.atan2(mf[3]-mf[1],mf[2]-mf[0]);
+    if(po.swoosh){cx.save();cx.globalAlpha=0.5*(1-Math.abs(po.swoosh-0.5));cx.strokeStyle="#ffffff";cx.lineWidth=H*0.05;
+      cx.beginPath();cx.arc(shx,shy,LA*2.6,-Math.PI*0.95,ang,false);cx.stroke();cx.restore();}
+    desenhaArmaSprite(a.arma.k,mf[2],mf[3],escalaArma(a.y),ang,false);}
   if(C.faca&&!branco){const dx=mf[2]-mf[0],dy=mf[3]-mf[1],d=Math.hypot(dx,dy)||1;cx.strokeStyle="#d8dde4";cx.lineWidth=Math.max(2,lw*0.35);
     cx.beginPath();cx.moveTo(mf[2],mf[3]);cx.lineTo(mf[2]+dx/d*H*0.12,mf[3]+dy/d*H*0.12);cx.stroke();}
   cx.restore();}
