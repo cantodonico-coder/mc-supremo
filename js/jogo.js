@@ -571,13 +571,14 @@ function tryFullscreen(){
 }
 addEventListener('orientationchange',()=>{setTimeout(fit,150);setTimeout(fit,400);});
 const SCALE_BACK=0.70,SCALE_FRONT=1.03;
-function bandFor(pi){const ph=P.phases[pi];return{top:ph.bandTop,bottom:ph.bandBottom};}
+function bandFor(pi){const ph=P.phases[pi],mx=(P.regras&&P.regras.faixaMax)||0; // faixa rasa (padrao SoR), menos onde tem degrau
+  const top=(mx>0&&!ph.degrau)?Math.max(ph.bandTop,ph.bandBottom-mx):ph.bandTop;return{top:top,bottom:ph.bandBottom};}
 // SISTEMA DE 2 FAIXAS: divide a band ao meio; faixa 0=baixo, faixa 1=cima.
 // Golpes e projéteis só acertam quem está na MESMA faixa do atacante.
 function getLane(y){const b=curBand();const mid=(b.top+b.bottom)/2;return y<mid?1:0;}
 function sameLane(a,b){return getLane(a)===getLane(b);}
 function curBand(){return bandFor(enemy.pi);}
-const dscale=y=>{const b=curBand();return SCALE_BACK+(SCALE_FRONT-SCALE_BACK)*Math.max(0,Math.min(1,(y-b.top)/(b.bottom-b.top)));};
+const dscale=y=>{const b=curBand(),SB=(P.regras&&P.regras.escalaFundo)||SCALE_BACK,SF=(P.regras&&P.regras.escalaFrente)||SCALE_FRONT;return SB+(SF-SB)*Math.max(0,Math.min(1,(y-b.top)/(b.bottom-b.top)));};
 // ---------- mundo rolante ----------
 const WORLD_LEN=1600; // comprimento PADRAO do corredor (fases sem worldLen proprio usam este)
 let CUR_WORLD_LEN=WORLD_LEN; // comprimento da fase ATUAL - algumas fases podem ser mais curtas
@@ -603,7 +604,7 @@ function buildTrack(band){
   // SORTEIO DOS OBJETOS DA RUA (banco, caixa de som, lixeira): sem regra fixa.
   // 1) a fase pode ou NAO ter objetos (PROPS_CHANCE_FASE); 2) quantos, tambem e sorteado (PROPS_MIN..PROPS_MAX);
   // 3) tipo, lugar e faixa da calcada sorteados, com um espaco minimo entre eles pra nao empilhar.
-  const k=CFG.ESCALA_PROPS||1,iniX=520,fimX=CUR_WORLD_LEN-360;
+  const k=(CFG.ESCALA_PROPS||1)*fatorObjetos(),iniX=520,fimX=CUR_WORLD_LEN-360;
   const livre=(x,dist)=>q.every(o=>Math.abs(o.wx-x)>dist);
   const sorteiaX=(dist)=>{for(let t=0;t<30;t++){const x=iniX+Math.random()*(fimX-iniX);if(livre(x,dist))return x;}return null;};
   if(Math.random()<CFG.PROPS_CHANCE_FASE){
@@ -1892,9 +1893,33 @@ function novoCapanga(lado,f){
     wx:lado>0?camX+W+90+Math.random()*80:camX-90-Math.random()*60,y:b.top+Math.random()*(b.bottom-b.top),facing:-lado});
   mooks.push(m);}
 function atacantes(e){let n=0;for(const o of alvos())if(o!==e&&(o.state==="windup"||o.state==="attack"))n++;return n;}
+// =====================================================================
+// CERCO ESTILO STREETS OF RAGE
+//  - no maximo MAX_ATACANTES viloes ENGAJADOS (colados no heroi), de preferencia um de cada lado;
+//  - quem atacou RECUA e descansa: outro entra no lugar (um de cada vez, da pra ler os golpes);
+//  - os que esperam ficam num ANEL em volta, cada um na sua distancia e faixa, sem empilhar.
+// =====================================================================
+function organizaCerco(dt){const p=player,V=mooks.filter(m=>m.state!=="dead"&&!m.grabbed);
+  for(const m of V){if(m.descansoT>0)m.descansoT-=dt;m.ladoCerco=(m.wx>=p.wx)?1:-1;}
+  const poucos=V.length<=2;                                          // sobrando 1 ou 2: nao tem quem reveze, eles nao descansam
+  const livre=m=>(poucos||!(m.descansoT>0));
+  const dist=m=>Math.abs(m.wx-p.wx)-(m.engajado?140:0);            // quem ja esta na briga tende a continuar
+  const porLado=l=>V.filter(m=>m.ladoCerco===l&&livre(m)).sort((a,b)=>dist(a)-dist(b));
+  const E=porLado(-1),D=porLado(1),max=Math.max(1,CFG.MAX_ATACANTES|0),eng=[];
+  if(E[0])eng.push(E[0]);if(D[0]&&eng.length<max)eng.push(D[0]);
+  // so tem gente de um lado: o segundo da a volta pra cercar pelo outro
+  let cruza=null;if(eng.length===1&&max>1){const L=(E.length?E:D);if(L[1])cruza=L[1];}
+  for(const m of V){m.engajado=eng.includes(m);m.cruzaLado=(m===cruza);}
+  // anel dos que esperam: distancia e faixa proprias por lado
+  const b=curBand(),alt=Math.max(1,b.bottom-b.top),d0=regra("anelDist",250),dp=regra("anelPasso",120);
+  for(const lado of[-1,1]){const fila=V.filter(m=>!m.engajado&&(m.cruzaLado?-m.ladoCerco:m.ladoCerco)===lado).sort((a,c)=>Math.abs(a.wx-p.wx)-Math.abs(c.wx-p.wx));
+    fila.forEach((m,i)=>{m.anelX=Math.max(camX+80,Math.min(camX+W-80,p.wx+lado*(d0+i*dp))); // sempre dentro da tela
+      const sinal=(i%2===0)?-1:1,passo=Math.min(alt*0.42,60+Math.floor(i/2)*34);
+      m.anelY=Math.max(b.top,Math.min(b.bottom,p.y+sinal*passo));});}}
 function atualizaOndas(dt){checaVidaExtra();
   if(goT>0)goT-=dt;
-  if(spawnFila.length){spawnFila[0].t-=dt;if(spawnFila[0].t<=0){const f=spawnFila.shift();novoCapanga(f.lado,f);if(f.mini)viraMini(mooks[mooks.length-1]);}}
+  organizaCerco(dt);
+  if(spawnFila.length&&mooks.filter(m=>m.state!=="dead").length<regra("maxNaTela",4)){spawnFila[0].t-=dt;if(spawnFila[0].t<=0){const f=spawnFila.shift();novoCapanga(f.lado,f);if(f.mini)viraMini(mooks[mooks.length-1]);}}
   if(!waveAtiva&&ondaIdx<ondas.length&&camX>=ondas[ondaIdx].x-2){
     waveAtiva=true;const o=ondas[ondaIdx];spawnFila=[];
     ckpt={onda:ondaIdx,x:o.x,boss:false,score};   // CHECKPOINT: se perder, volta aqui
@@ -1913,8 +1938,11 @@ function atualizaOndas(dt){checaVidaExtra();
   const L=alvos();
   for(let i=0;i<L.length;i++)for(let j=i+1;j<L.length;j++){const a=L[i],c=L[j];
     if(a.grabbed||c.grabbed)continue;
-    if(Math.abs(a.wx-c.wx)<55*kX()&&Math.abs(a.y-c.y)<16){const sg=(a.y<=c.y)?-1:1,b=curBand();
-      a.y=Math.max(b.top,Math.min(b.bottom,a.y+sg*40*dt));c.y=Math.max(b.top,Math.min(b.bottom,c.y-sg*40*dt));}}
+    if(Math.abs(a.wx-c.wx)<55*kX()&&Math.abs(a.y-c.y)<22){const sg=(a.y<=c.y)?-1:1,b=curBand();
+      a.y=Math.max(b.top,Math.min(b.bottom,a.y+sg*70*dt));c.y=Math.max(b.top,Math.min(b.bottom,c.y-sg*70*dt));
+      // empurra de lado so quem esta esperando (quem esta batendo nao sai do lugar)
+      const sx=(a.wx<=c.wx)?-1:1,parado=m=>m.mook&&!m.engajado&&(m.state==="approach");
+      if(parado(a))a.wx+=sx*90*dt;if(parado(c))c.wx-=sx*90*dt;}}
 }
 
 // ---------- colisão com props (obstáculo/plataforma) ----------
@@ -2487,7 +2515,7 @@ function updateEnemy(dt,ent){const e=ent||enemy,p=player;if(e.state==="espera")r
     // PELAS COSTAS (so azul): se esta na frente do MC, da a volta antes de bater. Desiste depois de ~2s pra nao virar danca.
     if(pf.costas&&Math.sign(e.wx-p.wx)!==p.facing)e.flancoT=0;
     const flanc=!!pf.costas&&Math.sign(e.wx-p.wx)===p.facing&&Math.abs(dx)<430*kX()&&e.entered!==false&&((e.flancoT=(e.flancoT||0)+dt)<2.2);
-    e.esperaVez=!!e.mook&&atacantes(e)>=CFG.MAX_ATACANTES; // no maximo N batendo ao mesmo tempo
+    e.esperaVez=!!e.mook&&!e.engajado;                       // so os engajados chegam perto (ver organizaCerco)
     if(tentaSequencia(e,dx))return;
     // INVESTIDA (perfil): de media distancia, na mesma faixa, avisa e dispara em linha reta. ⤴️ pula por cima; sair da faixa desvia.
     if(inv&&e.cd<=0&&e.entered!==false&&!e.esperaVez&&!(e.fogeT>0)&&Math.abs(dy)<=CFG.ENEMY_ATK_Y&&Math.abs(dx)>150*kX()&&Math.abs(dx)<=inv.dist*kX()&&screenX(e.wx)>50&&screenX(e.wx)<W-50){
@@ -2536,14 +2564,14 @@ function updateEnemy(dt,ent){const e=ent||enemy,p=player;if(e.state==="espera")r
       const b=curBand(),amp=Math.min(70,(b.bottom-b.top)*0.4),far=Math.abs(dx)>220;
       let ty=far?Math.max(b.top,Math.min(b.bottom,p.y+e.flankSide*amp)):p.y;if(pf.marca)ty=p.y; // MARCACAO: nunca sai da sua faixa
       if(e.fogeT>0){e.fogeT-=dt;applyPropCollision(e,-Math.sign(dx||1)*sp*dt);} // BATE E FOGE: recua depois do golpe
-      else if(flanc){const tx=p.wx-p.facing*120*kX();                              // PELAS COSTAS: contorna por cima/baixo
+      else if(flanc&&!e.esperaVez){const tx=p.wx-p.facing*120*kX();                              // PELAS COSTAS: contorna por cima/baixo
         applyPropCollision(e,Math.sign(tx-e.wx)*sp*1.15*dt);
         if(pf.salta){if(e.z<=0&&e.vz===0&&Math.abs(e.wx-p.wx)<170*kX())e.vz=pf.salta;}
         else if(Math.abs(e.wx-p.wx)<110*kX())ty=Math.max(b.top,Math.min(b.bottom,p.y+(e.flankSide||1)*Math.max(34,amp*0.7)));}
-      else if(e.esperaVez){ // aguardando a vez: cerca a uns 200px, sem colar
-        const d=Math.abs(dx);
-        if(d>230*kX())applyPropCollision(e,Math.sign(dx)*sp*dt);
-        else if(d<170*kX())applyPropCollision(e,-Math.sign(dx)*sp*0.6*dt);
+      else if(e.esperaVez){ // aguardando a vez: vai pro seu lugar no anel, sem colar
+        const tx=(e.anelX!==undefined)?e.anelX:e.wx,ddx=tx-e.wx;
+        if(Math.abs(ddx)>14)applyPropCollision(e,Math.sign(ddx)*Math.min(Math.abs(ddx),sp*(e.descansoT>0?1.1:0.85)*dt));
+        if(e.anelY!==undefined)ty=e.anelY;
       }else if(Math.abs(dx)>(CFG.ENEMY_STOP_DIST+pfA)*kX()){ // para dentro do alcance do soco do MC
         const ahead=propUnder(e.wx+Math.sign(dx)*90,e.y);
         if(ahead&&ahead.solidTop&&e.z<=0&&e.vz===0)e.vz=620;
@@ -2560,7 +2588,7 @@ function updateEnemy(dt,ent){const e=ent||enemy,p=player;if(e.state==="espera")r
     if(e.atkT<=0){
       if(inv.volta&&!e.voltou){e.voltou=true;e.rushDir=Math.sign(p.wx-e.wx)||-e.rushDir;e.state="windup"; // VAI E VOLTA: segunda passada
         e.windT=Math.max(inv.volta,CFG.TELEGRAPH_FRAMES/60);rings.push({wx:e.wx,y:e.y-60,r:14,t:e.windT+0.1,c:"#5599ff"});}
-      else{e.voltou=false;e.state="approach";e.meleeType=null;e.cd=1.3/dm;}}} // errou ou acertou: fica exposto um instante
+      else{e.voltou=false;e.state="approach";e.meleeType=null;e.cd=1.3/dm;if(e.mook)e.descansoT=regra("descanso",0.8);}}} // errou ou acertou: fica exposto um instante
   else if(e.state==="attack"){e.atkT-=dt;const pf=e.perfil||{};
     if(!e.atkHit&&e.atkT<0.22&&e.atkT>0.08){
       const phD=P.phases[e.pi];
@@ -2594,11 +2622,11 @@ function updateEnemy(dt,ent){const e=ent||enemy,p=player;if(e.state==="espera")r
         const golpeOk=e.bossSeqOK; e.meleeType=null;
         if(golpeOk) abreBrecha(e,{recover:1.4},"melee");
         else{e.state="approach";e.cd=0.55/dm/furyMul;}
-      } else {e.state="approach";e.cd=0.55/dm/furyMul*(pf.cd||1)/((pf.furia&&e.hp<=e.maxhp*0.5)?pf.furia:1);e.flancoT=0;if(pf.foge){e.fogeT=pf.foge;e.cd=Math.max(e.cd,pf.foge);}
+      } else {e.state="approach";e.cd=0.55/dm/furyMul*(pf.cd||1)/((pf.furia&&e.hp<=e.maxhp*0.5)?pf.furia:1);e.flancoT=0;if(e.mook&&!pf.duplo)e.descansoT=regra("descanso",0.8)*(pf.cd||1);if(pf.foge){e.fogeT=pf.foge;e.cd=Math.max(e.cd,pf.foge);}
         // GOLPE DUPLO (so azul): emenda um segundo golpe com aviso curto
         if(pf.duplo&&(e.duploN||0)<(pf.duploN||1)&&e.meleeType!=='grab'){e.duploN=(e.duploN||0)+1;e.state="windup";e.meleeType=(e.meleeType==='kick')?'punch':'kick';
           e.windT=Math.max(pf.duplo,CFG.TELEGRAPH_FRAMES/60);e.cd=0;rings.push({wx:e.wx,y:e.y-60,r:14,t:e.windT+0.1,c:"#5599ff"});}
-        else e.duploN=0;}
+        else{e.duploN=0;if(e.mook&&pf.duplo)e.descansoT=regra("descanso",0.8);}}
     }}
   e.prevWx=e.__pw||e.wx;e.__pw=e.wx;}
 
@@ -2812,11 +2840,13 @@ function drawShadow(sx,y,sc,z){const w=112*sc*(1-Math.min(z/260,0.4));cx.save();
   cx.globalAlpha=0.32*(1-Math.min(z/300,0.6));cx.fillStyle="#000";cx.beginPath();
   cx.ellipse(sx,y,w*0.5,14*sc,0,0,6.283);cx.fill();cx.restore();}
 // TAMANHO DOS PERSONAGENS na tela (Admin → Controles → Escala dos personagens). 0.80 era pequeno demais pro cenario.
-function escalaChar(){return CFG.ESCALA_PERSONAGENS||1.7;}
+function escalaChar(){return (P.regras&&P.regras.escalaBonecos)||CFG.ESCALA_PERSONAGENS||1.7;} // escalaBonecos (dados.js) manda; o Admin continua valendo se tirar a linha
 // distancias horizontais de golpe acompanham o tamanho na tela (valores do Admin valem pra escala 0.8 original)
 function kX(){return escalaChar()/0.8;}
 // altura na tela (pulo, voadora, fuga, props): mesmo tempo de pulo, desenho mais alto
-function kZ(){return CFG.ESCALA_ALTURA||1.6;}
+// fatorObjetos: objetos e altura de pulo acompanham o tamanho dos bonecos (escalaBonecos / 1.7 de antes)
+function fatorObjetos(){const e=P.regras&&P.regras.escalaBonecos;return e?e/1.7:1;}
+function kZ(){return (CFG.ESCALA_ALTURA||1.6)*fatorObjetos();}
 function drawActor(a,fr,z,dead){if(!fr||!fr.img)return;
   const porte=(a&&a.sizeMul!==undefined)?a.sizeMul:((a&&a.pi!==undefined&&IMG.phases[a.pi])?(IMG.phases[a.pi].sizeMul||1):1);
   z=(z||0)*kZ();
@@ -2898,7 +2928,7 @@ function drawProp(pr){{const sx=screenX(pr.wx);if(sx<-150||sx>W+150)return;
     const im=(pr.type==="uno")?IMG.props.uno.stages[Math.min(pr.dmg||0,2)]:IMG.props[pr.type];
     // pr.w/pr.h ja tem a escala do admin aplicada (copoScale/unoScale * imagem original)
     // basta normalizar pelo tamanho original e multiplicar por dscale
-    const propSc=pr.sc||(pr.type==="uno"?PROP_CFG.unoScale:PROP_CFG.copoScale);
+    const propSc=(pr.sc||(pr.type==="uno"?PROP_CFG.unoScale:PROP_CFG.copoScale))*fatorObjetos();
     const dw=im.w*propSc*sc,dh=im.h*propSc*sc,dx=sx-dw/2,dy=pr.y-dh;
     drawShadow(sx,pr.y,sc*propSc,0);
     if(im.img.ok){try{cx.drawImage(im.img,dx,dy,dw,dh);}catch(e){}}else{cx.fillStyle="#333";cx.fillRect(dx,dy,dw,dh);}}

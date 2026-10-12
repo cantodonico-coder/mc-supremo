@@ -199,3 +199,18 @@ O jogo tem manifesto (`manifest.webmanifest`) e ícones em `assets/ui/icone-*.pn
 - **Pânico**: dá para soltar mesmo cambaleando de um golpe. Não funciona caído nem agarrado.
 - Com 1 ponto de vida o especial não sai. Toque curto no 👊 continua sendo o soco normal.
 - Ajuste em `P.regras` no `js/dados.js`: `especialSegura`, `especialCusto`, `especialVolta`, `especialDano`, `especialRaio`.
+
+## Cerco no padrão Streets of Rage (out/2026)
+
+- **Máximo de 4 vilões de onda na tela**; os outros esperam fora e entram quando um cai.
+- **Só 2 chegam perto do herói por vez**, de preferência um de cada lado. Se todos estão do mesmo lado, um dá a volta.
+- **Quem atacou recua** e descansa um instante; outro entra no lugar.
+- **Os que esperam ficam num anel** em volta, cada um na sua distância e faixa, sem empilhar.
+- Ajuste em `P.regras` no `js/dados.js`: `maxNaTela`, `descanso`, `anelDist`, `anelPasso`. O número de vilões que chegam perto é `MAX_ATACANTES` (Admin).
+
+## Escala no padrão Streets of Rage (out/2026)
+
+- **Bonecos menores**: escala 1.4 (era 1.7). Objetos (Uno, bancos, caixas, lixeiras, copos) e altura do pulo diminuem na mesma proporção.
+- **Quase sem encolher no fundo**: 92% no fundo da calçada, 100% na frente (antes 70% a 103%).
+- **Faixa de andar rasa**: no máximo 210 px de profundidade, para ninguém "subir" para o fundo do cenário. Trensurb e Palco Final ficam como estavam por causa do degrau.
+- Ajuste em `P.regras` no `js/dados.js`: `escalaBonecos`, `escalaFundo`, `escalaFrente`, `faixaMax`. Apague `escalaBonecos` para voltar a usar a escala do Admin.

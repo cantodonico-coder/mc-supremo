@@ -100,6 +100,12 @@ P.outdoor = {"largura":230,"perna":200,"pos":{"OLD T":0.2},"imgs":[{"src":"asset
 P.regras = Object.assign(P.regras||{},{"armasPorFase":2,"armaDropPct":0.35});
 // ESPECIAL (segurar 👊 e soltar): especialSegura = segundos segurando · especialCusto = fracao da vida que gasta ·
 // especialVolta = vida que volta a cada golpe acertado depois · especialDano = x o soco · especialRaio = alcance em volta
+// CERCO (padrao Streets of Rage): maxNaTela = viloes de onda ao mesmo tempo na tela · descanso = segundos que o vilao recua depois de atacar ·
+// anelDist / anelPasso = distancia em que os que esperam a vez ficam do heroi (o 1o, e quanto a mais cada seguinte)
+// ESCALA ESTILO STREETS OF RAGE: boneco quase do mesmo tamanho no fundo e na frente da calcada (escalaFundo/escalaFrente)
+// e faixa de andar rasa (faixaMax = altura maxima em px; fases com degrau ficam como estao) · escalaBonecos = tamanho dos personagens (era 1.7)
+P.regras = Object.assign(P.regras,{"escalaFundo":0.92,"escalaFrente":1.0,"faixaMax":210,"escalaBonecos":1.4});
+P.regras = Object.assign(P.regras,{"maxNaTela":4,"descanso":0.8,"anelDist":250,"anelPasso":120});
 P.regras = Object.assign(P.regras,{"especialSegura":0.5,"especialCusto":0.08,"especialVolta":2,"especialDano":2.5,"especialRaio":150});
 // JAY: golpe novo, pancada de shape de cima pra baixo (aviso longo, forte, derruba)
 (function(){const j=P.phases.find(f=>f.name==="JAY");if(j&&!j.pancadaA){j.pancadaA=[{"src":"assets/viloes/01-jay/pancada_1.webp","w":218,"h":372},j.socoA[j.socoA.length-1]];j.pancadaDmg=8;}})();
