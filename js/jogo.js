@@ -572,7 +572,8 @@ function tryFullscreen(){
 addEventListener('orientationchange',()=>{setTimeout(fit,150);setTimeout(fit,400);});
 const SCALE_BACK=0.70,SCALE_FRONT=1.03;
 function bandFor(pi){const ph=P.phases[pi],mx=(P.regras&&P.regras.faixaMax)||0; // faixa rasa (padrao SoR), menos onde tem degrau
-  const top=(mx>0&&!ph.degrau)?Math.max(ph.bandTop,ph.bandBottom-mx):ph.bandTop;return{top:top,bottom:ph.bandBottom};}
+  const bot=Math.min(ph.bandBottom,(P.regras&&P.regras.chaoMax)||690); // pe nunca encosta na borda de baixo da tela
+  const top=(mx>0&&!ph.degrau)?Math.max(ph.bandTop,bot-mx):Math.min(ph.bandTop,bot-40);return{top:top,bottom:bot};}
 // SISTEMA DE 2 FAIXAS: divide a band ao meio; faixa 0=baixo, faixa 1=cima.
 // Golpes e projéteis só acertam quem está na MESMA faixa do atacante.
 function getLane(y){const b=curBand();const mid=(b.top+b.bottom)/2;return y<mid?1:0;}

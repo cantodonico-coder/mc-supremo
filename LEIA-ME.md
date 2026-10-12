@@ -212,6 +212,7 @@ O jogo tem manifesto (`manifest.webmanifest`) e ícones em `assets/ui/icone-*.pn
 
 - **Bonecos menores**: escala 1.4 (era 1.7). Objetos (Uno, bancos, caixas, lixeiras, copos) e altura do pulo diminuem na mesma proporção.
 - **Quase sem encolher no fundo**: 92% no fundo da calçada, 100% na frente (antes 70% a 103%).
+- **Pés sempre visíveis**: a linha mais baixa da calçada fica em 680 (a tela tem 720), ajustável em `chaoMax`.
 - **Faixa de andar rasa**: no máximo 210 px de profundidade, para ninguém "subir" para o fundo do cenário. Trensurb e Palco Final ficam como estavam por causa do degrau.
 - Ajuste em `P.regras` no `js/dados.js`: `escalaBonecos`, `escalaFundo`, `escalaFrente`, `faixaMax`. Apague `escalaBonecos` para voltar a usar a escala do Admin.
 

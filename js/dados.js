@@ -103,8 +103,8 @@ P.regras = Object.assign(P.regras||{},{"armasPorFase":2,"armaDropPct":0.35});
 // CERCO (padrao Streets of Rage): maxNaTela = viloes de onda ao mesmo tempo na tela · descanso = segundos que o vilao recua depois de atacar ·
 // anelDist / anelPasso = distancia em que os que esperam a vez ficam do heroi (o 1o, e quanto a mais cada seguinte)
 // ESCALA ESTILO STREETS OF RAGE: boneco quase do mesmo tamanho no fundo e na frente da calcada (escalaFundo/escalaFrente)
-// e faixa de andar rasa (faixaMax = altura maxima em px; fases com degrau ficam como estao) · escalaBonecos = tamanho dos personagens (era 1.7)
-P.regras = Object.assign(P.regras,{"escalaFundo":0.92,"escalaFrente":1.0,"faixaMax":210,"escalaBonecos":1.4});
+// e faixa de andar rasa (faixaMax = altura maxima em px; fases com degrau ficam como estao) · escalaBonecos = tamanho dos personagens (era 1.7) · chaoMax = linha mais baixa onde o pe pode ficar (tela tem 720)
+P.regras = Object.assign(P.regras,{"escalaFundo":0.92,"escalaFrente":1.0,"faixaMax":210,"escalaBonecos":1.4,"chaoMax":680});
 P.regras = Object.assign(P.regras,{"maxNaTela":4,"descanso":0.8,"anelDist":250,"anelPasso":120});
 P.regras = Object.assign(P.regras,{"especialSegura":0.5,"especialCusto":0.08,"especialVolta":2,"especialDano":2.5,"especialRaio":150});
 // JAY: golpe novo, pancada de shape de cima pra baixo (aviso longo, forte, derruba)
