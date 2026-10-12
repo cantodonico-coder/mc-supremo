@@ -3223,7 +3223,7 @@ let outdoorX=[];
 function montaOutdoor(){outdoorX=[];if(!IMG.outdoor.length)return;const em=(P.phases[phaseIndex]||{}).emendas||[];
   const len=(P.phases[phaseIndex]||{}).faseLen||CUR_WORLD_LEN;let melhor=0.5,md=-1;
   for(const f of [0.5,0.4,0.6,0.3,0.7]){const x=len*f;let dmin=1e9;for(const e of em)dmin=Math.min(dmin,Math.abs(e-x));if(dmin>340){melhor=f;break;}if(dmin>md){md=dmin;melhor=f;}}
-  const fixo=(P.outdoor.pos||{})[(P.phases[phaseIndex]||{}).name];if(fixo!==undefined)melhor=fixo; // posicao escolhida a mao pra fase (0 a 1)
+  const fixo=(P.outdoor.pos||{})[(P.phases[phaseIndex]||{}).name];if(fixo===-1){outdoorX=[];return;}if(fixo!==undefined)melhor=fixo; // -1 = fase sem outdoor // posicao escolhida a mao pra fase (0 a 1)
   outdoorX=[Math.round(len*melhor)];const im=IMG.outdoor[phaseIndex%IMG.outdoor.length];if(im.img._carregar)im.img._carregar();}
 function drawOutdoor(){const O=P.outdoor;if(!O||!outdoorX.length)return;const im=IMG.outdoor[phaseIndex%IMG.outdoor.length];if(!im||!im.img.ok)return;
   const b=curBand(),base=b.top+2;let Wd=O.largura||380,Hd=Wd*im.h/im.w;

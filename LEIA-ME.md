@@ -222,3 +222,10 @@ O jogo tem manifesto (`manifest.webmanifest`) e ícones em `assets/ui/icone-*.pn
 - Liga e desliga no menu de pausa (⏸ → MODO PALITO), ou abrindo o jogo com `?palito=1` / `?palito=0`. Fica lembrado no aparelho.
 - Mesmo tamanho e mesmas áreas de acerto da arte: dá para voltar à arte a qualquer momento sem mudar a dificuldade.
 - Herói com contorno dourado; versão azul em azul; mini-chefe com coroa; FACA com faca na mão.
+
+## Fase 1: Cervejaria Copo Vazio (out/2026)
+
+- O cenário da fase do JAY trocou da Esquina Democrática para a **Cervejaria Copo Vazio** (`assets/cenarios/01-cervejaria-panorama.webp`). Essa fase não tem outdoor (`"JAY":-1` em `P.outdoor.pos`).
+- **A esteira das garrafas é um degrau de slide** (`degrau` da fase em `js/dados.js`: `yPlat` 470 = topo da esteira, `yRua` 590 = pé dela, de `xIni` 410 a `xFim` 2090).
+  - **Subir:** encoste na esteira (manche para cima) e pule com o manche para cima.
+  - **Slide:** pule, aperte 🦵 (voadora) e segure 🦵 até pousar encostado na esteira. Ele desliza por cima das garrafas até soltar o 🦵 ou a esteira acabar.
