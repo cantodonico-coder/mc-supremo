@@ -172,7 +172,7 @@ const AU=(()=>{
     if(!ctx){ctx=new(window.AudioContext||window.webkitAudioContext)();
       master=ctx.createGain();master.gain.value=muted?0:0.75;master.connect(ctx.destination);
       music=ctx.createGain();music.gain.value=0.55;music.connect(master);
-      sfx=ctx.createGain();sfx.gain.value=0.85;sfx.connect(master);}
+      sfx=ctx.createGain();sfx.gain.value=0.85;sfx.connect(master);carregaAmostras();}
     if(ctx.state==="suspended")ctx.resume();
   }
   function noiseBuf(dur){const n=Math.max(1,Math.floor(ctx.sampleRate*dur));
@@ -413,15 +413,42 @@ function lead(freq,t,dur,vol){const o=ctx.createOscillator(),g=ctx.createGain();
     stepIdx=16*(Math.floor(Math.random()*4));  // entra num ponto diferente da roda
     nextStep=ctx.currentTime+0.05;
     if(!timer)tick();}
-  function stopLoop(){loopKind=null;if(curCustomKind&&customEls[curCustomKind]){customEls[curCustomKind].pause();curCustomKind=null;}}
+  function stopLoop(){paraLoops();return stopLoop0.apply(null,arguments);}
+  function stopLoop0(){loopKind=null;if(curCustomKind&&customEls[curCustomKind]){customEls[curCustomKind].pause();curCustomKind=null;}}
   function toggleMute(){muted=!muted;if(master)master.gain.value=muted?0:0.75;
     Object.values(customEls).forEach(a=>a.volume=muted?0:0.75);
     document.getElementById('snd').textContent=muted?"✕":"♪";}
   // ---- SFX ----
-  function punch(){ensure();const t=ctx.currentTime;const o=ctx.createOscillator(),g=ctx.createGain();
+  // ===== EFEITOS GRAVADOS (P.sons). Carrega tudo quando o audio liga; sem arquivo, cai no sintetizado.
+  const SMP={},LOOPS={};let smpIni=false,rodaUlt=0;
+  function carregaAmostras(){if(smpIni||!ctx||typeof P==="undefined"||!P.sons)return;smpIni=true;
+    for(const k in P.sons)(P.sons[k]||[]).forEach((src,i)=>{
+      fetch(src).then(r=>{if(!r.ok)throw 0;return r.arrayBuffer();}).then(b=>new Promise((ok,er)=>{const pr=ctx.decodeAudioData(b,ok,er);if(pr&&pr.catch)pr.catch(er);}))
+        .then(buf=>{(SMP[k]=SMP[k]||[])[i]=buf;}).catch(()=>{});});
+    setInterval(()=>{const l=LOOPS.rodinhas;if(l&&ctx&&ctx.currentTime-rodaUlt>0.25)l.g.gain.setTargetAtTime(0,ctx.currentTime,0.05);},200);}
+  function temSom(k){return !!(SMP[k]&&SMP[k].some(Boolean));}
+  function volDe(k){return (P.sonsVol&&P.sonsVol[k]!=null)?P.sonsVol[k]:0.8;}
+  function som(k,vol,rate){ensure();const l=(SMP[k]||[]).filter(Boolean);if(!l.length)return false;
+    const b=l[Math.floor(Math.random()*l.length)],src=ctx.createBufferSource(),g=ctx.createGain();
+    src.buffer=b;src.playbackRate.value=(rate||1)*(0.95+Math.random()*0.1);g.gain.value=volDe(k)*(vol==null?1:vol);
+    src.connect(g);g.connect(sfx);src.start();return true;}
+  function somLoop(k,on,vol){ensure();let l=LOOPS[k];
+    if(!on){if(l){const t=ctx.currentTime;l.g.gain.setTargetAtTime(0,t,0.06);try{l.src.stop(t+0.4);}catch(e){}delete LOOPS[k];}return;}
+    if(l){l.g.gain.setTargetAtTime(volDe(k)*(vol==null?1:vol),ctx.currentTime,0.05);return;}
+    const b=(SMP[k]||[]).filter(Boolean)[0];if(!b)return;
+    const src=ctx.createBufferSource(),g=ctx.createGain();src.buffer=b;src.loop=true;
+    src.loopStart=Math.min(0.06,b.duration*0.1);src.loopEnd=Math.max(src.loopStart+0.1,b.duration-0.06); // pula o silencio do mp3 nas pontas
+    g.gain.value=0;g.gain.setTargetAtTime(volDe(k)*(vol==null?1:vol),ctx.currentTime,0.05);src.connect(g);g.connect(sfx);src.start(0,src.loopStart);LOOPS[k]={src,g};}
+  // rodinhas do skate: chamada todo quadro com a velocidade (0 a 1); some sozinha se parar de chamar
+  function rodinhas(n){if(!ctx||!temSom("rodinhas"))return;rodaUlt=ctx.currentTime;
+    if(n<=0.02){if(LOOPS.rodinhas)LOOPS.rodinhas.g.gain.setTargetAtTime(0,ctx.currentTime,0.08);return;}
+    somLoop("rodinhas",true,Math.min(1,n));if(LOOPS.rodinhas)LOOPS.rodinhas.src.playbackRate.value=0.85+0.3*Math.min(1,n);}
+  function ambiente(k){for(const a in P.sonsAmbiente||{}){const n=P.sonsAmbiente[a];if(n!==k)somLoop(n,false);}if(k)somLoop(k,true);}
+  function paraLoops(){for(const k in LOOPS)somLoop(k,false);}
+  function punch(){ensure();if(som("whoosh",0.8))return;const t=ctx.currentTime;const o=ctx.createOscillator(),g=ctx.createGain();
     o.type="square";o.frequency.setValueAtTime(180,t);o.frequency.exponentialRampToValueAtTime(70,t+0.09);
     g.gain.setValueAtTime(0.5,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.1);o.connect(g);g.connect(sfx);o.start(t);o.stop(t+0.11);}
-  function kickHit(){ensure();const t=ctx.currentTime;const o=ctx.createOscillator(),g=ctx.createGain();
+  function kickHit(){ensure();if(som("whoosh",1.1,0.8))return;const t=ctx.currentTime;const o=ctx.createOscillator(),g=ctx.createGain();
     o.type="square";o.frequency.setValueAtTime(240,t);o.frequency.exponentialRampToValueAtTime(60,t+0.13);
     g.gain.setValueAtTime(0.55,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.14);o.connect(g);g.connect(sfx);o.start(t);o.stop(t+0.15);}
   function hurt(){ensure();const src=ctx.createBufferSource();src.buffer=noiseBuf(0.12);
@@ -443,11 +470,11 @@ function lead(freq,t,dur,vol){const o=ctx.createOscillator(),g=ctx.createGain();
     const o=ctx.createOscillator(),g=ctx.createGain();o.type="square";o.frequency.setValueAtTime(f,t+i*0.11);
     g.gain.setValueAtTime(0.24,t+i*0.11);g.gain.exponentialRampToValueAtTime(0.001,t+i*0.11+0.28);
     o.connect(g);g.connect(sfx);o.start(t+i*0.11);o.stop(t+i*0.11+0.3);});}
-  function lose(){ensure();const t=ctx.currentTime;[392,349,294,220].forEach((f,i)=>{
+  function lose(){ensure();som("gameOver");const t=ctx.currentTime;[392,349,294,220].forEach((f,i)=>{
     const o=ctx.createOscillator(),g=ctx.createGain();o.type="sawtooth";o.frequency.setValueAtTime(f,t+i*0.16);
     g.gain.setValueAtTime(0.2,t+i*0.16);g.gain.exponentialRampToValueAtTime(0.001,t+i*0.16+0.3);
     o.connect(g);g.connect(sfx);o.start(t+i*0.16);o.stop(t+i*0.16+0.32);});}
-  function fireSfx(){ensure();const t=ctx.currentTime;
+  function fireSfx(){ensure();if(som("tiro"))return;const t=ctx.currentTime;
     const src=ctx.createBufferSource();src.buffer=noiseBuf(0.55);
     const bp=ctx.createBiquadFilter();bp.type="bandpass";bp.Q.value=1.1;
     bp.frequency.setValueAtTime(320,t);bp.frequency.exponentialRampToValueAtTime(2600,t+0.30);
@@ -495,7 +522,7 @@ function lead(freq,t,dur,vol){const o=ctx.createOscillator(),g=ctx.createGain();
   function resumeAll(){try{if(ctx&&ctx.state==="suspended")ctx.resume();}catch(e){}
     if(curCustomKind&&customEls[curCustomKind]&&!muted)customEls[curCustomKind].play().catch(()=>{});}
   function tem(kind){return !!customEls[kind];}
-  return{prepara,tem,pauseAll,resumeAll,unlock,playLoop,stopLoop,toggleMute,punch,kickHit,hurt,jumpSfx,power,select,ko,lose,fireSfx,chargeSfx,vinilSfx,setCustomTrack,setFuryTempo};
+  return{temLoop:k=>!!LOOPS[k],som,somLoop,temSom,rodinhas,ambiente,paraLoops,prepara,tem,pauseAll,resumeAll,unlock,playLoop,stopLoop,toggleMute,punch,kickHit,hurt,jumpSfx,power,select,ko,lose,fireSfx,chargeSfx,vinilSfx,setCustomTrack,setFuryTempo};
 })();
 document.getElementById('snd').addEventListener('click',e=>{e.preventDefault();AU.unlock();AU.toggleMute();});
 addEventListener('touchstart',()=>{AU.unlock();tryFullscreen();},{passive:true});
@@ -643,7 +670,7 @@ function pegaCopos(){const p=player;if(p.z>4)return;
     if(Math.abs(pr.wx-p.wx)<Math.max(40,pr.w*0.5)&&Math.abs(pr.y-p.y)<CFG.COPO_Y){
       track.splice(i,1);
       const cura=CFG.COPO_CURA;p.hp=Math.min(p.maxhp,p.hp+cura);
-      addDmgNum(p.wx,p.y-190,"+"+cura,true,"#2ec27e");AU.select();
+      addDmgNum(p.wx,p.y-190,"+"+cura,true,"#2ec27e");AU.select();AU.som("splash",0.6,1.2);
       for(let r=0;r<2;r++)rings.push({wx:pr.wx,y:pr.y,r:12+r*12,t:0.45,c:"#2ec27e"});}}
 }
 // ---------- save ----------
@@ -1039,6 +1066,8 @@ function alvoEmAlcance(p,reach,depth){let best=null,bd=1e9;
   return best;}
 function emSequencia(e){return e.state==="breathwind"||e.state==="breath"
   ||e.state==="vinilwind"||e.state==="vinil";}
+function ehMulher(e){return /WALESKA/.test(e.nome||"")||(e===enemy&&(P.phases[e.pi]||{}).name==="WALESKA");}
+let _ultAtacante=null; // quem bateu no MC (pra faca soar como faca)
 function damageEnemy(dmg,kb,stun,tag,alvo,kind){const e=alvo||enemy;
   if(!e||e.state==="dead"||e.state==="espera")return;
   if(e.getupT>0&&!e.grabbed)return;                         // deitado/levantando: invulneravel
@@ -1066,7 +1095,10 @@ function damageEnemy(dmg,kb,stun,tag,alvo,kind){const e=alvo||enemy;
   if(isBossFight && e.stunT>0) dmg=Math.round(dmg*2);
   if(player.hpVolta>0&&!(player.espT>0)&&kind!=='especial'){const r=Math.min(player.hpVolta,regra("especialVolta",2));player.hpVolta-=r;player.hp=Math.min(player.maxhp,player.hp+r);
     addDmgNum(player.wx,player.y-235,"+"+r,false,"#9df0c0");}
-  AU.hurt();e.hp-=dmg;e.flashT=0.14;shake=Math.max(shake,7);score+=dmg*10;
+  {const fort=dmg>=10||(kb||0)>=1000||kind==="arremesso"||kind==="especial";if(!AU.som(fort?"forte":"soco"))AU.hurt();
+   if(fort&&Math.random()<0.45)AU.som("heroiForca");
+   if(dmg<e.hp&&Math.random()<0.3)AU.som(ehMulher(e)?"mulherAi":"vilaoAi",1,ehMulher(e)?1:0.9+Math.random()*0.25);}
+  e.hp-=dmg;e.flashT=0.14;shake=Math.max(shake,7);score+=dmg*10;
   vib((kb||0)>=1000||dmg>=10?28:12);   // hit leve 12ms · hit final/arremesso 28ms
   comboHit();if(kind==='chute')tut.chutou=true;
   e.kbx=(Math.sign(e.wx-player.wx)||1)*(kb||190)*(CFG.KB_MUL||1.5);
@@ -1075,7 +1107,7 @@ function damageEnemy(dmg,kb,stun,tag,alvo,kind){const e=alvo||enemy;
   addDmgNum(e.wx,e.y-160,dmg,big);
   doHitStop(big?0.09:0.045);
   e.combo=tag==="combo"?(e.combo||0)+1:0;
-  if(e.hp<=0){e.hp=0;e.state="dead";e.deadT=1.4;doHitStop(0.14);flashOverlay=Math.max(flashOverlay,0.3);
+  if(e.hp<=0){e.hp=0;e.state="dead";e.deadT=1.4;doHitStop(0.14);AU.som(ehMulher(e)?"mulherAi":"vilaoKo");flashOverlay=Math.max(flashOverlay,0.3);
     if(e.mook){score+=200;addDmgNum(e.wx,e.y-210,"+200",false,"#ffe36a");}
     if(e===enemy){clearBossSeqWatch();hideBossSeqHint();if(window.BossTouch)BossTouch.stopHitCounter();}}
   else{
@@ -1091,7 +1123,7 @@ function damageEnemy(dmg,kb,stun,tag,alvo,kind){const e=alvo||enemy;
   }}
 // PORTAO UNICO DE DANO: fogo, disco, soco, chute e agarrao dos viloes passam por aqui
 function derrubaMC(ox){const p=player;
-  p.seqHits=0;p.downT=CFG.QUEDA_CHAO;p.hurtT=0;p.kbx=(Math.sign(p.wx-ox)||-1)*420;
+  AU.som("queda");p.seqHits=0;p.downT=CFG.QUEDA_CHAO;p.hurtT=0;p.kbx=(Math.sign(p.wx-ox)||-1)*420;
   p.isInvincible=true;p.invincibleTimer=CFG.QUEDA_CHAO/GAME_SPEED+CFG.LEVANTA_INVENCIVEL; // no chao + levantando: ninguem bate
   p.atkT=p.kickT=p.throwT=p.segT=0;p.grindMode=null;p.grinding=false;p.airAtk=false;p.escaping=false;
   shake=Math.max(shake,12);vib([40,30,60]);addDmgNum(p.wx,p.y-200,"CAIU!",true,"#ff5a4a");}
@@ -1116,7 +1148,8 @@ function damagePlayer(dmg,deWx){if(player.hurtT>0||player.iframes>0||player.isIn
     addDmgNum(player.wx,player.y-120,"GUARD!",false,"#5599ff");
     return;
   }
-  AU.hurt();player.hp-=dmg;player.flashT=0.12;vib([30,40,30]);largaArma(player);player.hpVolta=0;comboFecha(true);tut.levouDano=true;est.dano+=dmg; // levou dano: padrao duplo, diferente de bater
+  {const fc=_ultAtacante&&_ultAtacante.tipo==="faca";_ultAtacante=null;if(!AU.som(fc?"faca":"forte",fc?1:0.85))AU.hurt();}
+  player.hp-=dmg;player.flashT=0.12;vib([30,40,30]);largaArma(player);player.hpVolta=0;comboFecha(true);tut.levouDano=true;est.dano+=dmg; // levou dano: padrao duplo, diferente de bater
   const ox=(deWx===undefined)?enemy.wx:deWx;
   shake=Math.max(shake,8);player.kbx=(Math.sign(player.wx-ox)||-1)*170;player.hurtT=0.32;
   if(player.throwTgt){player.throwTgt.grabbed=false;player.throwTgt=null;player.segT=0;player.throwT=0;}
@@ -1232,11 +1265,11 @@ function unoExplode(pr){
 }
 function quebraObst(pr){
   pr.hp--;pr.flashT=0.12;vib(pr.hp>0?10:25);pr.dmg=pr.hp<=pr.maxhp/3?2:(pr.hp<=pr.maxhp*2/3?1:0);
-  shake=Math.max(shake,5);AU.punch();
+  shake=Math.max(shake,5);if(!AU.som("soco",0.7))AU.punch();
   for(let i=0;i<6;i++)sparks.push({wx:pr.wx,y:pr.y-pr.topH*0.6,vx:(Math.random()-.5)*300,vy:-80-Math.random()*200,t:0.4,c:pr.type==="caixa"?"#333":"#8a9a8a"});
   if(pr.hp>0)return;
   tut.quebrou=true;const i=track.indexOf(pr);if(i>=0)track.splice(i,1);
-  AU.kickHit();shake=Math.max(shake,10);impactBurst(pr.wx,pr.y-pr.topH*0.5,"#fff2c0",true);
+  if(!AU.som("quebra"))AU.kickHit();shake=Math.max(shake,10);impactBurst(pr.wx,pr.y-pr.topH*0.5,"#fff2c0",true);
   for(let k=0;k<14;k++)sparks.push({wx:pr.wx,y:pr.y-pr.topH*0.5,vx:(Math.random()-.5)*520,vy:-150-Math.random()*300,t:0.7,c:["#222","#444","#ffcf33","#2ec27e","#c0392b"][k%5]});
   if(Math.random()<CFG.OBST_DROP_CURA){const im=IMG.props.copo,sc=PROP_CFG.copoScale;
     track.push({type:"copo",wx:pr.wx,w:im.w*sc,h:im.h*sc,topH:0,solidTop:false,y:pr.y,dmg:0,smokeT:0,hp:1});
@@ -1265,7 +1298,7 @@ function bateNoCarro(p,reach){
     impactBurst(p.wx,p.y-70,crit?"#ff4400":"#ffd27a",crit);
     pr.dmg=pr.hp<=mx/3?2:(pr.hp<=mx*2/3?1:0);
     if(pr.hp<=0)unoExplode(pr);
-    AU.punch();shake=Math.max(shake,6);
+    if(!AU.som("forte",0.8))AU.punch();shake=Math.max(shake,6);
   }
   return hit;
 }
@@ -1501,7 +1534,7 @@ function alvoColado(p){let best=null,bd=1e9;
 IMG.armas={};if(P.armas)for(const k in P.armas)IMG.armas[k]={img:mkImg(P.armas[k].src),w:P.armas[k].w,h:P.armas[k].h};
 let armasChao=[],armasVoando=[];
 function listaArmas(){return P.armas?Object.keys(P.armas):[];}
-function poeArmaNoChao(k,wx,y,usos){const d=P.armas&&P.armas[k];if(!d)return;armasChao.push({k:k,wx:wx,y:y,usos:usos||d.usos||1});}
+function poeArmaNoChao(k,wx,y,usos){const d=P.armas&&P.armas[k];if(!d)return;if(scene==="phase"&&player)AU.som("armaChao");armasChao.push({k:k,wx:wx,y:y,usos:usos||d.usos||1});}
 function espalhaArmas(){armasChao=[];armasVoando=[];player.arma=null;player.armaT=0;
   const n=regra("armasPorFase",2)|0,L=listaArmas();if(!L.length||n<=0)return;const b=curBand();
   for(let i=0;i<n;i++){const wx=Math.round(W*0.6+(CUR_WORLD_LEN-W*1.4)*(i+0.35+Math.random()*0.3)/n);
@@ -1509,14 +1542,14 @@ function espalhaArmas(){armasChao=[];armasVoando=[];player.arma=null;player.arma
 function armaPerto(p){if(p.z>4||!armasChao.length)return null;
   for(const a of armasChao)if(Math.abs(a.wx-p.wx)<80&&Math.abs(a.y-p.y)<=CFG.COPO_Y)return a;return null;}
 function estilhaco(wx,y,c){for(let i=0;i<10;i++)sparks.push({wx:wx,y:y,vx:(Math.random()-.5)*420,vy:-100-Math.random()*260,t:0.5,c:c||"#cfe"});}
-function pegaArma(p,a){const i=armasChao.indexOf(a);if(i>=0)armasChao.splice(i,1);p.arma={k:a.k,usos:a.usos};const d=P.armas[a.k];
+function pegaArma(p,a){AU.som("pegaArma");const i=armasChao.indexOf(a);if(i>=0)armasChao.splice(i,1);p.arma={k:a.k,usos:a.usos};const d=P.armas[a.k];
   addDmgNum(p.wx,p.y-200,d.nome+"!",true,"#ffcf33");AU.select();vib(15);
   if(!tut.arma){tut.arma=true;avisoHUD(d.soArremesso?"SOCO OU CHUTE: ARREMESSA":"SOCO BATE · CHUTE ARREMESSA");}}
 function largaArma(p){if(!p.arma)return;poeArmaNoChao(p.arma.k,p.wx-p.facing*40,p.y,p.arma.usos);p.arma=null;p.armaT=0;}
 function gastaArma(p){const d=P.armas[p.arma.k];p.arma.usos--;
   if(p.arma.usos<=0){addDmgNum(p.wx,p.y-215,"QUEBROU!",false,"#ff7a5a");estilhaco(p.wx+p.facing*70,p.y-120,d.cor);p.arma=null;}}
 function balancaArma(p){const d=P.armas[p.arma.k];if(d.soArremesso)return arremessaArma(p);
-  p.comboStep=0;p.bufPunchT=0;p.state="attack";p.armaT=0.32;p.armaHit=false;p.skAnim=0;p.atkId=(p.atkId||0)+1;AU.punch();}
+  p.comboStep=0;p.bufPunchT=0;p.state="attack";p.armaT=0.32;p.armaHit=false;p.skAnim=0;p.atkId=(p.atkId||0)+1;if(!AU.som("whoosh",1.6,0.85))AU.punch();}
 function arremessaArma(p){
   armasVoando.push({k:p.arma.k,usos:p.arma.usos,wx:p.wx+p.facing*50,y:p.y,z:70,vx:p.facing*900,dir:p.facing,rot:0,dist:0});
   p.arma=null;p.armaT=0;p.comboStep=0;p.bufPunchT=0;p.state="kick";p.kickT=0.2;p.kickHit=true;p.skAnim=0;AU.kickHit();}
@@ -1538,7 +1571,7 @@ function atualizaArmas(dt){
       impactBurst(t.wx,t.y-110,"#fff2c0",true);shake=Math.max(shake,9);fim=true;break;}
     if(!fim&&(a.dist>760||a.wx<camX-30||a.wx>camX+W+30)){fim=true;errou=true;}
     if(fim){armasVoando.splice(i,1);
-      if(d.quebraAoArremessar||a.usos<=1||a.wx<camX+20||a.wx>camX+W-20){estilhaco(a.wx,a.y-(errou?12:110),d.cor);AU.kickHit();}
+      if(d.quebraAoArremessar||a.usos<=1||a.wx<camX+20||a.wx>camX+W-20){estilhaco(a.wx,a.y-(errou?12:110),d.cor);if(!AU.som(a.k==="garrafa"||a.k==="copo"?"splash":"quebra"))AU.kickHit();}
       else poeArmaNoChao(a.k,a.wx-a.dir*36,a.y,a.usos-1);}}}
 function desenhaArmaSprite(k,x,y,sc,rot,flip){const im=IMG.armas[k],d=P.armas[k];if(!im||!im.img.ok)return;
   const w=im.w*sc,h=im.h*sc;cx.save();cx.translate(x,y);if(flip)cx.scale(-1,1);cx.rotate(rot);
@@ -1575,7 +1608,7 @@ function soltaEspecial(p){
   p.espT=0.5;p.espHit=0;p.espFace=p.facing;p.hurtT=0;p.atkT=0;p.kickT=0;p.armaT=0;p.bufPunchT=0;p.comboStep=0;p.atkFinisher=false;
   p.grindMode=null;p.grinding=false;p.kbx=0;p.state="attack";p.skAnim=0;p.atkId=(p.atkId||0)+1;
   p.iframes=Math.max(p.iframes||0,0.62);press.punch=press.kick=false;
-  addDmgNum(p.wx,p.y-225,"GIRO 360!",true,"#ffcf33");AU.power();shake=Math.max(shake,10);vib([20,30,40]);tut.especial=true;
+  addDmgNum(p.wx,p.y-225,"GIRO 360!",true,"#ffcf33");if(!AU.som("especial"))AU.power();AU.som("giro");shake=Math.max(shake,10);vib([20,30,40]);tut.especial=true;
   for(let i=0;i<3;i++)rings.push({wx:p.wx,y:p.y,r:20+i*26,t:0.45,c:"#ffcf33"});}
 function golpeEspecial(p){const R=regra("especialRaio",150)*kX();
   for(const t of alvos()){if(t.grabbed||Math.abs(t.wx-p.wx)>R||Math.abs(t.y-p.y)>46)continue;
@@ -1670,7 +1703,7 @@ function pertoDegrau(p){const dg=degrauFase();return !!dg&&degrauAtivo(dg,p.wx)&
 function pertoMeioFio(p){const b=curBand();return pertoDegrau(p)||Math.min(Math.abs(p.y-b.top),Math.abs(p.y-b.bottom))<=CFG.CURB_MARGIN;}
 function alturaCabeca(t){const fr=enFrame(t);const porte=t.sizeMul||(IMG.phases[t.pi]&&IMG.phases[t.pi].sizeMul)||1;
   return (fr?Math.max(80,fr.h*dscale(t.y)*escalaChar()*porte*0.9):160)/kZ();}
-function startGrind(p,mode,tgt){
+function startGrind(p,mode,tgt){AU.som("pouso",0.7);AU.somLoop(mode==="prop"?"slideMetal":"slidePedra",true);
   p.grindMode=mode;p.grindTgt=tgt||null;p.grindT=0;p.grindDir=p.facing||1;p.grindTick=0.05;p.grindHits=0;p.grindHitSet=[];
   p.grinding=true;p.skating=true;p.state="skate";p.airAtk=false;p.airHit=false;p.escaping=false;p.vz=0;p.mvy=0;p.skAnim=0;
   p.comboStep=0;p.atkT=0;p.kickT=0;
@@ -1681,7 +1714,7 @@ function startGrind(p,mode,tgt){
   else if(mode==="prop"){p.z=p.grindZ||tgt.topH;p.__onProp=tgt;p.y=tgt.y;}
   else if(mode==="cabeca"){p.grindOff=p.wx-tgt.wx;p.y=tgt.y;p.z=alturaCabeca(tgt);p.__onProp=null;}
   tut.slide=true;shake=Math.max(shake,4);AU.jumpSfx();vib(15);addDmgNum(p.wx,p.y-p.z-120,"SLIDE!",false,"#bfe8ff");}
-function endGrind(p,ollie){const m=p.grindMode;p.grindZ=null;p.grindMode=null;p.grindTgt=null;p.grinding=false;p.manobra=null;p.hopT=0;
+function endGrind(p,ollie){const m=p.grindMode;AU.somLoop("slideMetal",false);AU.somLoop("slidePedra",false);if(!ollie)AU.som("pouso",0.8);p.grindZ=null;p.grindMode=null;p.grindTgt=null;p.grinding=false;p.manobra=null;p.hopT=0;
   if(ollie){p.vz=CFG.JUMP_VZ*0.9;p.jumpsUsed=1;p.escapeUsed=false;p.lastJumpTap=performance.now();p.state="jump";AU.jumpSfx();}
   else if(m==="cabeca"){p.vz=CFG.GRIND_HOP_VZ;p.jumpsUsed=1;p.state="jump";}
   else if(m==="meiofio"){p.skating=false;p.state="land";p.landT=0.12;p.jumpsUsed=0;}
@@ -1860,7 +1893,7 @@ function preCarregaTipos(){try{const az=azulLigado();
   if(az)for(let i=0;i<phaseIndex;i++)if(P.phases[i]&&IMG.phases[i])setAzulFase(i);}catch(e){}}
 let tipoPtr=0;
 function viraMini(m){if(!m)return;m.mini=true;m.hp=m.maxhp=Math.round(m.maxhp*mist("miniHp",3));m.sizeMul=(m.sizeMul||1)*1.22;m.dmgMul=(m.dmgMul||1)*1.2;
-  m.nome="CHEFÃO "+m.nome;bannerT=1.8;bannerNome=m.nome;bannerCor="#ff8c1a";AU.power();shake=Math.max(shake,8);}
+  m.nome="CHEFÃO "+m.nome;bannerT=1.8;bannerNome=m.nome;bannerCor="#ff8c1a";AU.power();AU.som("rugido");shake=Math.max(shake,8);}
 // ---------- VIDAS (padrao Streets of Rage) ----------
 // Acabou a vida: perde 1 vida e volta NO MESMO LUGAR, invencivel por um instante, com os viloes jogados pra longe.
 // Sem vidas: tela de derrota, e o CONTINUAR devolve as vidas. Vida extra a cada P.regras.vidaExtraPts pontos.
@@ -2039,6 +2072,9 @@ function updateCombat(dt){est.t+=dt/GAME_SPEED;updatePlayer(dt);updateEnemy(dt);
   streamProps();pegaCopos();atualizaArmas(dt);
 }
 function updatePlayer(dt){const p=player;
+  {const vx=p._rx==null?0:Math.abs(p.wx-p._rx)/Math.max(dt,1e-3),vy=p._ry==null?0:Math.abs(p.y-p._ry)/Math.max(dt,1e-3);p._rx=p.wx;p._ry=p.y;
+   if(scene==="phase"){const am=(P.sonsAmbiente||{})[(P.phases[phaseIndex]||{}).name]||null;if(am!==AU._amb||(am&&!AU.temLoop(am))){AU._amb=am;AU.ambiente(am);}}
+   AU.rodinhas((scene==="phase"&&(p.z||0)<=1&&!p.grinding&&!(p.downT>0))?Math.min(1,(vx+vy*1.5)/420):0);}
   if(p.iframes>0)p.iframes-=dt;if(p.flashT>0)p.flashT-=dt;p.skAnim+=dt;
   // relogio REAL: dt do jogo ja vem multiplicado por GAME_SPEED (0.72), entao divide de volta
   if(p.isInvincible){p.invincibleTimer-=dt/GAME_SPEED;if(p.invincibleTimer<=0){p.isInvincible=false;p.invincibleTimer=0;}}
@@ -2093,7 +2129,7 @@ function updatePlayer(dt){const p=player;
         else if(p.joelhaT<=0){p.joelhadas++;p.joelhaT=0.13;tut.joelhada=true;
           damageEnemy(Math.max(1,Math.round(HERO().dmgSoco*0.8)),1,0.6,null,t,'joelhada');
           if(t.state!=="dead"){t.grabbed=true;t.state="hurt";t.hurtT=Math.max(t.hurtT,p.segT+CFG.THROW_T+0.3);}
-          AU.punch();shake=Math.max(shake,5);impactBurst(t.wx,t.y-110,"#fff2c0",false);
+          if(!AU.som("forte",0.9))AU.punch();shake=Math.max(shake,5);impactBurst(t.wx,t.y-110,"#fff2c0",false);
           addDmgNum(t.wx,t.y-230,p.joelhadas+"ª JOELHADA",false,"#ffe36a");
           if(p.joelhadas>=CFG.JOELHADAS_MAX)iniciaArremesso(p,"tras");}}
       if(p.segT>0&&p.segT<=0.001)iniciaArremesso(p,"tras");
@@ -2294,7 +2330,7 @@ function updatePlayer(dt){const p=player;
       if(grindProp)startGrind(p,"prop",p.__onProp);
       else if(grindMF)startGrind(p,"meiofio");
       else{
-        p.landT=0.14;p.state="land";p.skating=false;p.grinding=false;
+        p.landT=0.14;p.state="land";p.skating=false;p.grinding=false;AU.som("pouso");
       }
       p.mvy=0;if(p.escaping){p.isInvincible=false;p.invincibleTimer=0;}p.escaping=false; // tocou o chao: fim da invencibilidade
     }}
@@ -2442,7 +2478,7 @@ function updateEnemy(dt,ent){const e=ent||enemy,p=player;if(e.state==="espera")r
     const floorZ=e.__onProp?e.__onProp.topH:0;
     if(e.z<=floorZ&&e.vz<=0){e.z=floorZ;e.vz=0;
       if(e.derrubado&&e.state!=="dead"){e.derrubado=false;e.deitadoT=CFG.DEITADO_T;e.getupT=CFG.DEITADO_T+CFG.LEVANTA_INVULN;
-        e.state="hurt";e.caiu=true;e.hurtT=Math.max(e.hurtT||0,CFG.DEITADO_T+(((e.imgSet||IMG.phases[e.pi])||{}).sentadoA?0.45:0.15));shake=Math.max(shake,5);}}
+        AU.som("queda",0.8);e.state="hurt";e.caiu=true;e.hurtT=Math.max(e.hurtT||0,CFG.DEITADO_T+(((e.imgSet||IMG.phases[e.pi])||{}).sentadoA?0.45:0.15));shake=Math.max(shake,5);}}
   }
   // DEFESA IA: chance aleatória ao receber ataque perto
   if(e.guardT>0){e.guardT-=dt;if(e.guardT<=0){e.guarding=false;e.guardT=0;}}
@@ -2596,7 +2632,7 @@ function updateEnemy(dt,ent){const e=ent||enemy,p=player;if(e.state==="espera")r
     e.atkT-=dt;e.facing=e.rushDir;applyPropCollision(e,e.rushDir*inv.vel*kX()*dt);
     if(!e.atkHit&&Math.abs(p.wx-e.wx)<62*kX()&&Math.abs(p.y-e.y)<=CFG.ENEMY_HIT_Y+3&&(inv.salto||(p.z||0)<40)){e.atkHit=true;
       const phD=P.phases[e.pi],dB=(e.dmgBase!=null)?e.dmgBase:((phD&&phD.dmgSoco!=null)?phD.dmgSoco:3);
-      damagePlayer(Math.max(1,Math.round(dB*(e.dmgMul||1))),e.wx);}
+      _ultAtacante=e;damagePlayer(Math.max(1,Math.round(dB*(e.dmgMul||1))),e.wx);}
     if(e.atkT<=0){
       if(inv.volta&&!e.voltou){e.voltou=true;e.rushDir=Math.sign(p.wx-e.wx)||-e.rushDir;e.state="windup"; // VAI E VOLTA: segunda passada
         e.windT=Math.max(inv.volta,CFG.TELEGRAPH_FRAMES/60);rings.push({wx:e.wx,y:e.y-60,r:14,t:e.windT+0.1,c:"#5599ff"});}
@@ -2624,7 +2660,7 @@ function updateEnemy(dt,ent){const e=ent||enemy,p=player;if(e.state==="espera")r
       } else if(inReach(e,p,CFG.ENEMY_HIT_X+(pf.alcance||0),CFG.ENEMY_HIT_Y+1)){e.atkHit=true;
         const dmgV=(e.dmgBase!=null)?e.dmgBase:((e.meleeType==='kick')?dmgChute:dmgSoco);
         const smash=e.meleeType==='smash';
-        damagePlayer(Math.max(1,Math.round((smash?Math.max(dmgV*3,(phD&&phD.pancadaDmg)||8):dmgV)*(e.dmgMul||1))),e.wx);
+        _ultAtacante=e;damagePlayer(Math.max(1,Math.round((smash?Math.max(dmgV*3,(phD&&phD.pancadaDmg)||8):dmgV)*(e.dmgMul||1))),e.wx);
         if(smash&&player.hurtT>0&&!(player.downT>0)&&scene==="phase"){derrubaMC(e.wx);shake=Math.max(shake,16);}
         if(pf.empurra&&player.hurtT>0&&!(player.downT>0))player.kbx=(Math.sign(player.wx-e.wx)||1)*pf.empurra; // EMPURRAO: joga o MC longe
       }

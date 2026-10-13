@@ -230,3 +230,20 @@ O jogo tem manifesto (`manifest.webmanifest`) e ícones em `assets/ui/icone-*.pn
   - **Subir:** encoste na esteira (manche para cima) e pule com o manche para cima.
   - **Slide:** pule, aperte 🦵 (voadora) e segure 🦵 até pousar encostado na esteira. Ele desliza por cima das garrafas até soltar o 🦵 ou a esteira acabar.
 - **Objetos da cervejaria** (`assets/props/cervejaria/`, recortados da folha de peças Copo Vazio): engradados e sacos de malte no lugar da caixa de som (quebráveis), barris de inox e madeira no lugar do latão (quebráveis, com slide em cima), esteiras soltas no lugar do banco (slide em cima). A lista fica em `P.objetosFase` no fim de `js/dados.js`. Para dar arte própria a outra fase, crie uma entrada com o nome do chefe.
+
+## Efeitos sonoros gravados (out/2026)
+
+- Os sons ficam em `assets/sons/` (mp3 mono, cortados e com volume igualado). A lista está em `P.sons` no fim de `js/dados.js`, o volume de cada um em `P.sonsVol`.
+- **Onde cada som toca:**
+  - Golpe no ar: `whoosh`.
+  - Acerto: `soco`. Golpe forte, arremesso ou especial: `forte`, às vezes com o grito de força do herói.
+  - Vilão: `vilao-ai` (às vezes, ao apanhar) e `vilao-ko` (no nocaute). A Waleska usa `mulher-ai`.
+  - Herói apanha: `forte`. Se o atacante for o FACA: `faca`.
+  - Quedas no chão (herói ou vilão): `queda`.
+  - Objetos: acerto em caixa ou barril `soco`, quebrou `quebra`.
+  - Armas: pegar `pega-arma`, cair no chão `arma-chao`, garrafa ou copo estilhaçado `splash`.
+  - Especial (giro 360): `especial` + `giro`. Chefe entra: `rugido`. Tiro dos chefes: `tiro`. Game over: `game-over`.
+  - Skate: `pouso` ao cair do pulo, `slide-pedra` (meio-fio e degrau) e `slide-metal` (banco, barril, carro) em loop durante o slide, `rodinhas` em loop conforme a velocidade.
+  - Fundo: `corvos` na Redenção (`P.sonsAmbiente`).
+- Aberto direto do disco (sem servidor) os mp3 não carregam, e o jogo usa os sons sintetizados de antes.
+- Não usados por enquanto (originais com você): correndo, espirro, pedra na água, skate parado, skate no parque, passando no meio-fio.
