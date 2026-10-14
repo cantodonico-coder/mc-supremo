@@ -133,3 +133,9 @@ P.sonsAmbiente = {"OLD T": "corvos"};
 // P.alcance = HITBOX dos golpes do heroi (px de mundo; multiplica pelo tamanho dos bonecos, entao acompanha a escala).
 // X = distancia pra frente; prof = diferenca maxima de profundidade (px de tela, faixa da calcada); so acerta quem esta NA FRENTE.
 P.alcance = {"chute":{"abacaxi":62,"nico":68},"chuteProf":20,"ar":{"abacaxi":58,"nico":64},"arProf":24,"especial":85,"especialProf":34,"slide":48,"dash":55,"dashProf":26};
+
+// P.ambiente = camadas de som de fundo por fase. Nomes de P.sons (arquivo em loop, ex.: corvos) ou sintetizados:
+// cidade (trânsito, carro passando) · gente (pessoas falando e passos) · mar (ondas) · passaros · industria (máquinas, garrafas).
+// P.musicaCalma: a trilha só toca durante a briga; fora dela fica o ambiente (volume do ambiente na briga = ambienteNaBriga).
+P.ambiente = {"JAY": ["industria", "gente"], "O SKATER": ["cidade", "gente"], "OLD T": ["passaros", "corvos", "gente"], "MÃO DE PEDRA": ["cidade", "gente"], "WALESKA": ["cidade", "gente"], "MAZAROPE": ["mar", "passaros"], "SUPER BOSS": ["mar", "passaros", "gente"]};
+P.musicaCalma = {"ativa":1,"entra":1.2,"sai":2.5,"ambienteNaBriga":0.45,"respiracao":1};

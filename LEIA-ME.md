@@ -257,3 +257,15 @@ O jogo tem manifesto (`manifest.webmanifest`) e ícones em `assets/ui/icone-*.pn
   - Golpe no ar: ~80 px, só na mesma faixa da calçada (antes valia a calçada inteira na profundidade).
   - Giro 360: raio ~120 px (antes ~260).
   - Slide e investida: encostando.
+
+## Música só na briga + som ambiente por fase (out/2026)
+
+- A trilha **só entra quando começa a briga** (onda de capangas ou chefe) e **some devagar** quando a briga acaba (no "VAI!" e antes do chefe). Ao voltar a brigar, ela continua de onde parou. Ajustes em `P.musicaCalma` (`entra`/`sai` = segundos do fade, `ambienteNaBriga` = volume do ambiente durante a luta, `respiracao` 1/0).
+- Fora da briga ficam o som ambiente, as rodinhas do skate e a **respiração** do herói parado.
+- **Ambiente por fase** (`P.ambiente`), feito por síntese, sem arquivo:
+  - Cervejaria: máquinas, garrafas tilintando, pessoas.
+  - Pista de skate, Museu e Trensurb: trânsito com carro passando (às vezes buzina), pessoas falando e passos.
+  - Redenção: passarinhos, corvos (arquivo) e pessoas.
+  - Gasômetro: água batendo e passarinhos.
+  - Palco final (Cidreira): mar, passarinhos e pessoas.
+- Para trocar por gravação de verdade: coloque o mp3 em `assets/sons/`, registre em `P.sons` (ex.: `"mar":["assets/sons/mar.mp3"]`) e use o nome em `P.ambiente`. Arquivo registrado com o mesmo nome toma o lugar do sintetizado.
