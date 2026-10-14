@@ -285,3 +285,10 @@ O jogo tem manifesto (`manifest.webmanifest`) e ícones em `assets/ui/icone-*.pn
 - **Agarrão fácil (padrão SoR):** andar contra o vilão colado agarra sozinho (`agarraAndando` 0.16 s). 👊 colado também agarra, mas só bem encostado (`agarraSocoX`), para não atrapalhar o combo.
 - **Vilão pega arma do chão** (garrafa, shape, tábua; o copo não): vai buscar quando a arma está na tela, bate mais forte e mais longe, gasta os usos e **solta a arma** quando é derrubado, agarrado ou nocauteado. Ajustes: `vilaoPegaArma` (chance), `vilaoArmaDano`, `vilaoArmaBusca` (distância).
 - Correção: no modo com arte (sem palito), a arma na mão do herói não aparecia por um erro no código.
+
+## Museu: toca-discos e microfone viram plataforma (out/2026)
+
+- A faixa de andar do Museu agora vai da grama (atrás) até o chão molhado (frente).
+- `plataformas` da fase (em `js/dados.js`): objetos que já estão desenhados no cenário ganham colisão, altura para subir e slide. `x`/`w` em px do cenário, `y` = linha do pé, `prof` = profundidade que ocupam.
+  - **Toca-discos:** bloco na faixa de trás. Para passar por ali, pule em cima (ou dê a volta pela frente). Dá slide em cima.
+  - **Microfone deitado:** **rampa** (`perfil` = lista de [x, altura]). Mais alto no bojo, baixando até a ponta. Pule no bojo com a voadora segurando 🦵 e desce deslizando pelo microfone inteiro; dá para subir também na parte baixa.

@@ -703,11 +703,16 @@ function buildTrack(band){
     const u=IMG.props.uno.stages[0],us=CFG.CARRO_ESCALA||0.43,uw=u.w*us,cxw=CUR_WORLD_LEN*(0.2+Math.random()*0.5);
     q.push({type:"uno",wx:cxw,w:uw,h:u.h*us,topH:PROP_CFG.unoTopH*0.75,solidTop:true,grind:true,fixo:true,sc:us,
       y:laneCima,dmg:0,smokeT:0,hp:99,maxhp:99});}
+  // PLATAFORMAS DO CENARIO (fase.plataformas): o objeto ja esta desenhado no fundo; aqui so a colisao,
+  // a altura pra subir e o slide em cima. x/w em px do cenario, y = linha do pe, prof = profundidade que ocupa.
+  for(const pl of (P.phases[phaseIndex].plataformas||[]))
+    q.push({type:"plataforma",invisivel:true,wx:pl.x,w:pl.w,h:pl.topH*kZ(),topH:pl.perfil?Math.max(...pl.perfil.map(v=>v[1])):pl.topH,solidTop:true,grind:!!pl.grind,fixo:true,
+      y:pl.y,prof:pl.prof||CFG.PROP_PROF,perfil:pl.perfil||null,dmg:0,smokeT:0,hp:99,maxhp:99});
   // SORTEIO DOS OBJETOS DA RUA (banco, caixa de som, lixeira): sem regra fixa.
   // 1) a fase pode ou NAO ter objetos (PROPS_CHANCE_FASE); 2) quantos, tambem e sorteado (PROPS_MIN..PROPS_MAX);
   // 3) tipo, lugar e faixa da calcada sorteados, com um espaco minimo entre eles pra nao empilhar.
   const k=(CFG.ESCALA_PROPS||1)*fatorObjetos(),iniX=520,fimX=CUR_WORLD_LEN-360;
-  const livre=(x,dist)=>q.every(o=>Math.abs(o.wx-x)>dist);
+  const livre=(x,dist)=>q.every(o=>Math.abs(o.wx-x)>(o.type==="plataforma"?o.w/2+80:dist));
   const sorteiaX=(dist)=>{for(let t=0;t<30;t++){const x=iniX+Math.random()*(fimX-iniX);if(livre(x,dist))return x;}return null;};
   const _skinF=(P.objetosFase||{})[(P.phases[phaseIndex]||{}).name]||null; // arte propria da fase (ex.: cervejaria)
   if(Math.random()<CFG.PROPS_CHANCE_FASE||(_skinF&&_skinF.sempre)){
@@ -1817,7 +1822,7 @@ function startGrind(p,mode,tgt){AU.som("pouso",0.7);AU.somLoop(mode==="prop"?"sl
   p.grindDegrau=false;
   if(mode==="meiofio"&&pertoDegrau(p)){p.y=degrauFase().yPlat;p.z=0;p.__onProp=null;p.grindDegrau=true;} // slide na borda do degrau
   else if(mode==="meiofio"){const b=curBand();p.y=(Math.abs(p.y-b.top)<Math.abs(p.y-b.bottom))?b.top:b.bottom;p.z=0;p.__onProp=null;}
-  else if(mode==="prop"){p.z=p.grindZ||tgt.topH;p.__onProp=tgt;p.y=tgt.y;}
+  else if(mode==="prop"){p.z=tgt.perfil?topDe(tgt,p.wx):(p.grindZ||tgt.topH);p.__onProp=tgt;p.y=tgt.y;}
   else if(mode==="cabeca"){p.grindOff=p.wx-tgt.wx;p.y=tgt.y;p.z=alturaCabeca(tgt);p.__onProp=null;}
   tut.slide=true;shake=Math.max(shake,4);AU.jumpSfx();vib(15);addDmgNum(p.wx,p.y-p.z-120,"SLIDE!",false,"#bfe8ff");}
 function endGrind(p,ollie){const m=p.grindMode;AU.somLoop("slideMetal",false);AU.somLoop("slidePedra",false);if(!ollie)AU.som("pouso",0.8);p.grindZ=null;p.grindMode=null;p.grindTgt=null;p.grinding=false;p.manobra=null;p.hopT=0;
@@ -1885,7 +1890,7 @@ function updateGrind(p,dt){
     if(Math.abs(p.wx-alvoX)>0.5){endGrind(p,false);return;}          // bateu na borda da tela
     if(p.grindMode==="prop"){const pr=p.grindTgt;
       if(!pr||track.indexOf(pr)<0||pr.exploded||Math.abs(p.wx-pr.wx)>pr.w*0.42){p.__onProp=null;p.airAtk=false;endGrind(p,false);return;}
-      p.z=(p.grindZ||pr.topH)+pulinhoManobra(p);p.__onProp=pr;
+      p.z=(pr.perfil?topDe(pr,p.wx):(p.grindZ||pr.topH))+pulinhoManobra(p);p.__onProp=pr;
     }else{ // meio-fio: tromba e empurra quem estiver no caminho
       for(const t of alvos()){if(p.grindHitSet.includes(t))continue;
         if(Math.abs(t.wx-p.wx)<alc("slide",48)*kX()&&Math.abs(t.y-p.y)<=alc("chuteProf",20)+6&&(t.z||0)<20){p.grindHitSet.push(t);
@@ -2096,11 +2101,16 @@ function atualizaOndas(dt){checaVidaExtra();
 }
 
 // ---------- colisão com props (obstáculo/plataforma) ----------
+// altura do topo do objeto no ponto x: reto (topH) ou RAMPA (perfil [[x,altura],...], ex.: microfone deitado)
+function topDe(pr,wx){if(!pr)return 0;const pf=pr.perfil;if(!pf)return pr.topH;
+  if(wx<=pf[0][0])return pf[0][1];
+  for(let i=1;i<pf.length;i++)if(wx<=pf[i][0]){const a=pf[i-1],b=pf[i],k=(wx-a[0])/(b[0]-a[0]);return a[1]+(b[1]-a[1])*k;}
+  return pf[pf.length-1][1];}
 function propUnder(wx,y){
   for(const pr of track){
     if(wx>pr.wx-pr.w*0.42&&wx<pr.wx+pr.w*0.42){
       // se y fornecido, so bloqueia se estiver na mesma faixa do prop
-      if(y!==undefined&&pr.y!==undefined&&Math.abs(y-pr.y)>CFG.PROP_PROF)continue; // ocupa so a propria faixa de profundidade
+      if(y!==undefined&&pr.y!==undefined&&Math.abs(y-pr.y)>(pr.prof||CFG.PROP_PROF))continue; // ocupa so a propria faixa de profundidade
       return pr;
     }
   }
@@ -2114,14 +2124,14 @@ function bloqueiaY(ent,prevY){
   for(const pr of track){
     if(!pr.solidTop||pr.exploded)continue;
     if(Math.abs(ent.wx-pr.wx)>=pr.w*0.42)continue;
-    const dentro=Math.abs(ent.y-pr.y)<=CFG.PROP_PROF,antes=Math.abs(prevY-pr.y)<=CFG.PROP_PROF;
-    if(dentro&&!antes&&(ent.z||0)<pr.topH*0.55){ent.y=prevY;return;}}}
+    const PF=pr.prof||CFG.PROP_PROF,dentro=Math.abs(ent.y-pr.y)<=PF,antes=Math.abs(prevY-pr.y)<=PF;
+    if(dentro&&!antes&&(ent.z||0)<topDe(pr,ent.wx)*0.55){ent.y=prevY;return;}}}
 function applyPropCollision(ent,dxWorld){
   // ent: player/enemy com {wx,y,z}
   const target=ent.wx+dxWorld;
   const pr=propUnder(target, ent.y);
   if(pr){
-    const topH=pr.solidTop?pr.topH:0;
+    const topH=pr.solidTop?topDe(pr,target):0;
     // histerese: se já estava subindo/em cima, usa limiar mais baixo pra não "piscar" bloqueado/livre entre frames
     const wasClimbing = ent.__climbing===pr;
     const climbGate = wasClimbing ? topH*0.35 : topH*0.55;
@@ -2251,14 +2261,14 @@ function updatePlayer(dt){const p=player;
    else p.colaT=0;}
   // ===== 🦵 CHUTE: golpe unico de afastamento (shuv-it). Nao entra em combo, nao derruba =====
   if(press.kick){press.kick=false;
-    const noAr=(p.z>(p.__onProp?p.__onProp.topH:0)+1)||p.vz>0;
+    const noAr=(p.z>(p.__onProp?topDe(p.__onProp,p.wx):0)+1)||p.vz>0;
     if(noAr)golpeNoAr(p);
     else if(p.arma&&p.atkT<=0&&p.kickT<=0&&p.throwT<=0&&!(p.armaT>0))arremessaArma(p);
     else if(p.atkT>0&&!p.arma){p.bufKickT=1;}
     else if(p.atkT<=0&&p.kickT<=0&&p.throwT<=0&&!(p.armaT>0)){p.comboStep=0;p.bufPunchT=0;p.bufKickT=0;p.state="kick";p.kickT=CHUTE_T();p.kickHit=false;p.skAnim=0;p.atkId=(p.atkId||0)+1;AU.kickHit();}}
   // ===== 👊 SOCO: longe = combo automatico com o skate; colado (X e Y) = agarrao + arremesso =====
   if(press.punch){press.punch=false;
-    const noAr=(p.z>(p.__onProp?p.__onProp.topH:0)+1)||p.vz>0;
+    const noAr=(p.z>(p.__onProp?topDe(p.__onProp,p.wx):0)+1)||p.vz>0;
     if(noAr)golpeNoAr(p);
     else if(p.atkT<=0&&p.kickT<=0&&p.throwT<=0&&!(p.armaT>0)){
       if(p.arma)balancaArma(p);
@@ -2344,14 +2354,14 @@ function updatePlayer(dt){const p=player;
   // jatos/discos seguidos, ele deixa o heroi flutuando por mais tempo entre
   // um ataque e o proximo, sem precisar pousar e arriscar tomar o seguinte.
   // pulo guardado no buffer: dispara assim que o MC esta livre e com o pe no chao
-  if(p.jumpBufT>0&&p.atkT<=0&&p.kickT<=0&&p.throwT<=0&&p.z<=(p.__onProp?p.__onProp.topH:0)+1&&p.vz<=0){
+  if(p.jumpBufT>0&&p.atkT<=0&&p.kickT<=0&&p.throwT<=0&&p.z<=(p.__onProp?topDe(p.__onProp,p.wx):0)+1&&p.vz<=0){
     p.jumpBufT=0;press.jumpTaps.push(performance.now());}
   // ⤴️: processa TODOS os toques do frame, cada um com o instante real em que o dedo tocou
   if(press.jump||press.jumpTaps.length){
     const taps=press.jumpTaps.length?press.jumpTaps.splice(0):[performance.now()];
     press.jump=false;
     for(const tapT of taps){
-      const jumpFloorZ=p.__onProp?p.__onProp.topH:0;
+      const jumpFloorZ=p.__onProp?topDe(p.__onProp,p.wx):0;
       const grounded=p.z<=jumpFloorZ+1&&p.vz<=0;
       // no chao SEMPRE pode pular (mesmo que algum estado tenha deixado jumpsUsed sujo: fim de slide, agarrao, paralisia)
       if(grounded||(p.coyoteT>0&&p.jumpsUsed===0)){
@@ -2437,11 +2447,11 @@ function updatePlayer(dt){const p=player;
   if(held.kick&&p.skating&&p.vz<=0&&p.z>0){
     for(const pr of track){if(!pr.grind||pr.exploded)continue;
       // banco: vindo por TRAS (profundidade menor que o banco) = encosto; pela FRENTE = assento
-      const nivel=(pr.topH2&&p.y<pr.y-4&&p.z>=pr.topH2-12)?pr.topH2:pr.topH;
-      if(Math.abs(p.wx-pr.wx)<pr.w*0.45&&Math.abs(p.y-pr.y)<=CFG.PROP_PROF*1.6&&p.z>=nivel-10&&p.z<=nivel+80){p.grindZ=nivel;startGrind(p,"prop",pr);p.anim+=dt;return;}}}
+      const nivel=(pr.topH2&&p.y<pr.y-4&&p.z>=pr.topH2-12)?pr.topH2:topDe(pr,p.wx);
+      if(Math.abs(p.wx-pr.wx)<pr.w*0.45&&Math.abs(p.y-pr.y)<=(pr.prof||CFG.PROP_PROF)*1.6&&p.z>=nivel-10&&p.z<=nivel+80){p.grindZ=nivel;startGrind(p,"prop",pr);p.anim+=dt;return;}}}
   const noAr=(p.z>0||p.vz!==0);   // recalculado AGORA (o pisao pode ter mudado vz)
   if(noAr){p.z+=p.vz*dt;p.vz-=2000*dt;
-    const floorZ=p.__onProp?p.__onProp.topH:0;
+    const floorZ=p.__onProp?topDe(p.__onProp,p.wx):0;
     if(p.z<=floorZ&&p.vz<=0){p.z=floorZ;p.vz=0;p.airAtk=false;p.airHit=false;p.stompHit=false;p.jumpsUsed=0;p.airComboN=0;p.airStep=0;p.airFinisher=false;p.airBuf=false;p.airNextT=0;
       // MANOBRA DE GRIND: se estava de skate ao alcançar o teto do Uno, desliza por cima
       // em vez de simplesmente "pousar" (mantem o estado de skate e ativa o rastro de faiscas).
@@ -2454,13 +2464,13 @@ function updatePlayer(dt){const p=player;
       }
       p.mvy=0;if(p.escaping){p.isInvincible=false;p.invincibleTimer=0;}p.escaping=false; // tocou o chao: fim da invencibilidade
     }}
-  else{const floorZ=p.__onProp?p.__onProp.topH:0;if(Math.abs(p.z-floorZ)>1)p.z=floorZ;}
+  else{const floorZ=p.__onProp?topDe(p.__onProp,p.wx):0;if(Math.abs(p.z-floorZ)>1)p.z=floorZ;}
   // TRAVA DE SEGURANCA: se por qualquer motivo o jogador ficar preso no alto,
   // forca a queda apos 2.5s de voo continuo.
-  {const pisoZ=p.__onProp?p.__onProp.topH:0;
+  {const pisoZ=p.__onProp?topDe(p.__onProp,p.wx):0;
    if(p.z>pisoZ+1){p.arT=(p.arT||0)+dt; if(p.arT>2.5&&p.vz>-50)p.vz=-900;} else p.arT=0;}
   // COYOTE TIME: saiu do chao/plataforma andando (sem pular) ainda pode pular por ~0.1s
-  {const pisoZ2=p.__onProp?p.__onProp.topH:0,groundedNow=(p.z<=pisoZ2+0.5);
+  {const pisoZ2=p.__onProp?topDe(p.__onProp,p.wx):0,groundedNow=(p.z<=pisoZ2+0.5);
    if(p.wasGrounded&&!groundedNow&&p.jumpsUsed===0)p.coyoteT=0.10;
    if(p.coyoteT>0)p.coyoteT-=dt;
    p.wasGrounded=groundedNow;}
@@ -2595,7 +2605,7 @@ function updateEnemy(dt,ent){const e=ent||enemy,p=player;if(e.state==="espera")r
   // GRAVIDADE/PULO: vilao pode pular pra subir no Uno ou escapar de canto.
   if(e.z>0||e.vz!==0){
     e.z+=e.vz*dt;e.vz-=2000*dt;
-    const floorZ=e.__onProp?e.__onProp.topH:0;
+    const floorZ=e.__onProp?topDe(e.__onProp,e.wx):0;
     if(e.z<=floorZ&&e.vz<=0){e.z=floorZ;e.vz=0;
       if(e.derrubado&&e.state!=="dead"){e.derrubado=false;e.deitadoT=CFG.DEITADO_T;e.getupT=CFG.DEITADO_T+CFG.LEVANTA_INVULN;
         AU.som("queda",0.8);e.state="hurt";e.caiu=true;e.hurtT=Math.max(e.hurtT||0,CFG.DEITADO_T+(((e.imgSet||IMG.phases[e.pi])||{}).sentadoA?0.45:0.15));shake=Math.max(shake,5);}}
@@ -3268,7 +3278,7 @@ function drawObst(pr,sx,sc){if(drawSkin(pr,sx))return;
 function drawProps(){for(const pr of track)drawProp(pr);drawSmoke();}
 function drawProp(pr){{const sx=screenX(pr.wx);if(sx<-150||sx>W+150)return;
     const sc=dscale(pr.y);
-    if(pr.exploded)return;
+    if(pr.exploded||pr.invisivel)return; // plataforma desenhada no proprio cenario (ex.: toca-discos do museu)
     if(pr.type==="banco"){drawBanco(pr,sx,sc);return;}
     if(pr.breakable){drawObst(pr,sx,sc);return;}
     const im=(pr.type==="uno")?IMG.props.uno.stages[Math.min(pr.dmg||0,2)]:IMG.props[pr.type];
