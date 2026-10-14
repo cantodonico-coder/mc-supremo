@@ -897,31 +897,35 @@ document.querySelectorAll('#tc .tb').forEach(b=>{const k=b.dataset.k;
   addEventListener('mouseup',e=>{if(active&&pid===null)end(e);});
   addEventListener('blur',()=>{if(active){active=false;pid=null;resetKeys();knob.style.transform='translate(0,0)';}});
 })();
-// ---------- painel de ajuste fino (só em toque) ----------
+// ---------- AJUSTE DOS CONTROLES (⚙ na pausa; ⚙ no canto so no modo dev) ----------
+// Tamanho/posicao do manche e dos botoes, espaco entre os botoes. Fica salvo no aparelho.
 (function(){
   const toggle=document.getElementById('dbgToggle'),panel=document.getElementById('dbgPanel');
-  if(!IS_TOUCH||!DEV){return;}
-  toggle.style.display='flex';
-  toggle.addEventListener('click',()=>{panel.style.display=panel.style.display==='block'?'none':'block';});
   const root=document.documentElement.style;
-  const map=[
-    ['s_stick','v_stick','--stick-size',''],
-    ['s_knob','v_knob','--knob-size',''],
-    ['s_stickpos','v_stickpos','--stick-pos',''],
-    ['s_btn','v_btn','--btn-size',''],
-    ['s_btnpos','v_btnpos','--btn-pos',''],
-  ];
-  map.forEach(([sliderId,outId,varName])=>{
-    const el=document.getElementById(sliderId),out=document.getElementById(outId);
-    el.addEventListener('input',()=>{root.setProperty(varName,el.value+'px');out.textContent=el.value;});
-  });
+  const map=[['s_stick','v_stick','--stick-size'],['s_knob','v_knob','--knob-size'],['s_stickpos','v_stickpos','--stick-pos'],
+    ['s_btn','v_btn','--btn-size'],['s_btngap','v_btngap','--btn-gap'],['s_btnpos','v_btnpos','--btn-pos']];
+  const padrao={};map.forEach(([id])=>{const el=document.getElementById(id);if(el)padrao[id]=el.value;});
   const extraSlider=document.getElementById('s_extra'),extraOut=document.getElementById('v_extra');
-  extraSlider.addEventListener('input',()=>{extraOut.textContent=(+extraSlider.value).toFixed(2);EXTRA_SCALE=+extraSlider.value;fit();});
+  const salva=()=>{try{const o={};map.forEach(([id])=>{o[id]=document.getElementById(id).value;});o.extra=extraSlider.value;localStorage.setItem('mcs_ctrl',JSON.stringify(o));}catch(e){}};
+  const aplica=(id,v)=>{const m=map.find(x=>x[0]===id);if(!m)return;const el=document.getElementById(id);el.value=v;root.setProperty(m[2],v+'px');document.getElementById(m[1]).textContent=v;};
+  try{const o=JSON.parse(localStorage.getItem('mcs_ctrl')||'null');if(o){map.forEach(([id])=>{if(o[id]!=null)aplica(id,o[id]);});
+    if(o.extra!=null){extraSlider.value=o.extra;extraOut.textContent=(+o.extra).toFixed(2);EXTRA_SCALE=+o.extra;try{fit();}catch(e){}}}}catch(e){}
+  map.forEach(([id])=>{const el=document.getElementById(id);el.addEventListener('input',()=>{aplica(id,el.value);salva();});});
+  extraSlider.addEventListener('input',()=>{extraOut.textContent=(+extraSlider.value).toFixed(2);EXTRA_SCALE=+extraSlider.value;fit();salva();});
+  let veioDaPausa=false;
+  window.abreAjusteControles=function(){veioDaPausa=true;document.getElementById('pauseOv').classList.remove('show');panel.style.display='block';};
+  const fecha=()=>{panel.style.display='none';if(veioDaPausa){veioDaPausa=false;if(paused)document.getElementById('pauseOv').classList.add('show');}};
+  const tapB=(el,fn)=>{if(!el)return;el.addEventListener('click',e=>{e.preventDefault();fn();});el.addEventListener('touchend',e=>{e.preventDefault();e.stopPropagation();fn();},{passive:false});};
+  tapB(document.getElementById('dbgOk'),fecha);
+  tapB(document.getElementById('dbgReset'),()=>{map.forEach(([id])=>aplica(id,padrao[id]));extraSlider.value=1;extraOut.textContent="1.00";EXTRA_SCALE=1;fit();salva();});
+  document.getElementById('dbgCopy').style.display=DEV?'block':'none';
   document.getElementById('dbgCopy').addEventListener('click',()=>{
     const vals=map.map(([s])=>`${s}=${document.getElementById(s).value}`).join(', ')+`, extra=${extraSlider.value}`;
     document.getElementById('dbgOut').textContent=vals;
-    if(navigator.clipboard)navigator.clipboard.writeText(vals).catch(()=>{});
-  });
+    if(navigator.clipboard)navigator.clipboard.writeText(vals).catch(()=>{});});
+  if(!IS_TOUCH||!DEV)return;
+  toggle.style.display='flex';
+  toggle.addEventListener('click',()=>{veioDaPausa=false;panel.style.display=panel.style.display==='block'?'none':'block';});
 })();
 const hubGoBtn=document.getElementById('hubGo');
 const hubGoTap=e=>{e.preventDefault();press.confirm=true;};
@@ -976,7 +980,10 @@ function despausar(){
   try{if(pv&&!document.getElementById('pPalito')){const bp=document.createElement('button');bp.id='pPalito';
     const rot=()=>{bp.textContent=palitoAtivo()?"🦴 MODO PALITO: LIGADO":"🦴 MODO PALITO: DESLIGADO";};rot();
     const tg=e=>{e.preventDefault();e.stopPropagation();setPalito(!palitoAtivo());rot();};
-    bp.addEventListener('click',tg);bp.addEventListener('touchend',tg,{passive:false});pv.parentNode.insertBefore(bp,ps);}}catch(e){}
+    bp.addEventListener('click',tg);bp.addEventListener('touchend',tg,{passive:false});pv.parentNode.insertBefore(bp,ps);
+    const bc=document.createElement('button');bc.id='pCtrl';bc.textContent="⚙ AJUSTAR CONTROLES";
+    const tc=e=>{e.preventDefault();e.stopPropagation();window.abreAjusteControles&&window.abreAjusteControles();};
+    bc.addEventListener('click',tc);bc.addEventListener('touchend',tc,{passive:false});pv.parentNode.insertBefore(bc,ps);}}catch(e){}
   const tap=(el,fn)=>{el.addEventListener('touchstart',e=>{e.preventDefault();e.stopPropagation();fn();},{passive:false});
     el.addEventListener('click',e=>{e.preventDefault();fn();});};
   tap(pb,()=>{vib(8);pausar("");});

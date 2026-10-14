@@ -65,7 +65,7 @@ footer{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:
 .legend .pow{color:#ffe36a}
 .tag{font-family:"Press Start 2P",monospace;font-size:10px;color:#8a7a5a;border:1px solid #3a3020;border-radius:20px;padding:6px 12px}
 #tc{position:absolute;inset:0;pointer-events:none;display:block;z-index:5}
-:root{--stick-size:92px;--knob-size:40px;--stick-pos:16px;--btn-size:46px;--btn-pos:16px}
+:root{--stick-size:92px;--knob-size:40px;--stick-pos:16px;--btn-size:46px;--btn-pos:16px;--btn-gap:6px}
 #stick{position:absolute;left:var(--stick-pos);bottom:var(--stick-pos);width:var(--stick-size);height:var(--stick-size);border-radius:50%;
  background:radial-gradient(circle,rgba(20,16,10,.55),rgba(10,8,12,.65));
  border:3px solid rgba(255,207,51,.45);pointer-events:all;touch-action:none;display:none}
@@ -75,7 +75,7 @@ footer{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:
 #stickZone{position:absolute;left:0;bottom:0;width:42%;height:72%;pointer-events:all;touch-action:none}
 body.hub-scene #stickZone{display:none}
 .act{position:absolute;right:var(--btn-pos);bottom:var(--stick-pos);display:grid;grid-template-columns:repeat(2,var(--btn-size));
- grid-template-rows:repeat(2,var(--btn-size));gap:6px;pointer-events:none}
+ grid-template-rows:repeat(2,var(--btn-size));gap:var(--btn-gap);pointer-events:none}
 .tb{background:rgba(10,8,12,.68);border:2px solid rgba(255,207,51,.55);color:var(--gold);border-radius:13px;
  display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;
  font-family:"Press Start 2P",monospace;pointer-events:all;user-select:none;-webkit-user-select:none;
@@ -191,3 +191,10 @@ body.hub-scene #stick,body.hub-scene .act{display:none}
 .fbtns .adj{background:#3d7bd6;color:#fff}.fbtns .clr{background:#5a2a2a;color:#fff}
 .fprev{background:#000;border-radius:5px;border:1px solid #444}
 .fps{width:42px}
+
+#dbgOk,#dbgReset{width:100%;padding:8px;margin-bottom:6px;border-radius:6px;font-family:"Press Start 2P",monospace;font-size:9px;cursor:pointer}
+#dbgOk{background:#2ec27e;color:#06120a;border:none}#dbgReset{background:transparent;color:#e7d8ad;border:1px solid rgba(255,207,51,.5)}
+#dbgPanel{max-height:calc(100% - 60px);overflow:auto}
+#dbgPanel{width:300px}
+.dbgRow label{flex:0 0 120px;white-space:nowrap;font-size:15px;color:#e7d8ad;display:block}
+.dbgRow input{min-width:0}

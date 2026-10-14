@@ -335,3 +335,7 @@ Cada capanga ganhou um golpe próprio, além do estilo de luta que já tinha (ta
 | REGATA | **Agarra e arremessa** o herói no chão | Esquiva antes de ele pegar |
 
 - Aviso "!" vermelho no preparo do carrinho, da faca e do agarrão (não dá pra defender); amarelo nos outros.
+
+## Ajuste dos controles (out/2026)
+
+- Na pausa: **⚙ AJUSTAR CONTROLES**. Tamanho do manche e da bolinha, canto do manche, tamanho dos botões, **espaço entre os botões**, canto dos botões e zoom da tela. Muda ao vivo, fica salvo no aparelho (`mcs_ctrl`). **↺ VOLTAR AO PADRÃO** desfaz.
