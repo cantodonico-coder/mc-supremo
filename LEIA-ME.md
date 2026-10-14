@@ -309,3 +309,16 @@ O jogo tem manifesto (`manifest.webmanifest`) e ícones em `assets/ui/icone-*.pn
 - Repetir a mesma não conta ("JÁ FEZ ESSA!"). No bônus aparece a lista das 5 com ✔ nas feitas.
 - As mesmas 5 manobras valem em qualquer slide (meio-fio, banco, esteira, microfone). Fazer as 5 no mesmo slide = COMBO DE MANOBRAS.
 - **Sons de skate extras:** `ollie` (estalo do shape no pulo), `shape-clack` (chute e voadora), `meiofio-batida` (entrando no slide do meio-fio/degrau), `slide-freio` (saindo do slide), `pouso-2` (alterna com o pouso).
+
+## Golpes do herói no padrão Streets of Rage (out/2026)
+
+| Comando | Golpe |
+|---|---|
+| →→ (dois toques pra frente) + 👊 | **BLITZ**: investida com o shape, derruba (`blitzJanela`, `blitzT`, `blitzVel`) |
+| 👊 com vilão só nas costas | **GOLPE PRA TRÁS** com o tail do skate, sem virar; depois vira de frente |
+| ⤴️ durante o agarrão | **PULA POR CIMA** do vilão e fica nas costas dele |
+| 👊 ou 🦵 agarrado por trás | **SUPLEX DE SKATE**: joga por cima da cabeça, dano maior |
+| Agarrar quem está de costas | já começa por trás (suplex direto) |
+| Segurar 👊 + manche pra frente ao soltar | **INVESTIDA 360**: o giro avança na reta |
+| Segurar 👊 com arma na mão | **GIRO COM A ARMA**: raio e dano maiores, gasta 1 uso |
+| Arremesso contra a borda da tela | **RICOCHETE**: o vilão bate e volta, com dano extra |
