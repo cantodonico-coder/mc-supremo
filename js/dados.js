@@ -150,3 +150,8 @@ P.regras = Object.assign(P.regras,{"socoT":0.26,"chuteT":0.30,"agarraAndando":0.
 // sons de skate extras
 Object.assign(P.sons,{"ollie": ["assets/sons/ollie.mp3"], "shapeClack": ["assets/sons/shape-clack.mp3", "assets/sons/shape-clack-2.mp3"], "meiofioBatida": ["assets/sons/meiofio-batida.mp3"], "slideFreio": ["assets/sons/slide-freio.mp3"], "pouso2": ["assets/sons/pouso-2.mp3"]});
 Object.assign(P.sonsVol,{"ollie": 0.8, "shapeClack": 0.7, "meiofioBatida": 0.7, "slideFreio": 0.45, "pouso2": 0.6});
+
+// GOLPE ASSINATURA de cada capanga (padrao Streets of Rage, com skate). chance = por oportunidade; cd = espera (s).
+// carrinho: desliza deitado no skate rente ao chao (PULE). faca: arremessa faca na faixa (PULE ou troque de faixa).
+// arremessa: o agarrao dele joga o heroi no chao. gancho: soco de baixo pra cima que derruba (de pra defender).
+P.assinaturas = {"laranja": {"golpe": "carrinho", "chance": 0.5, "cd": 4}, "faca": {"golpe": "faca", "chance": 0.55, "cd": 4.5}, "regata": {"golpe": "arremessa", "chance": 1, "cd": 0}, "colete": {"golpe": "gancho", "chance": 0.4, "cd": 3.5}};

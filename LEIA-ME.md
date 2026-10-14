@@ -322,3 +322,16 @@ O jogo tem manifesto (`manifest.webmanifest`) e ícones em `assets/ui/icone-*.pn
 | Segurar 👊 + manche pra frente ao soltar | **INVESTIDA 360**: o giro avança na reta |
 | Segurar 👊 com arma na mão | **GIRO COM A ARMA**: raio e dano maiores, gasta 1 uso |
 | Arremesso contra a borda da tela | **RICOCHETE**: o vilão bate e volta, com dano extra |
+
+## Golpe assinatura dos capangas no padrão SoR (out/2026)
+
+Cada capanga ganhou um golpe próprio, além do estilo de luta que já tinha (tabela `P.assinaturas` no fim de `js/dados.js`: `chance` e `cd` = espera em segundos):
+
+| Capanga | Golpe | Como escapar |
+|---|---|---|
+| LARANJA | **Carrinho**: deita no skate e desliza rente ao chão, derruba | Pular |
+| FACA | **Faca arremessada** na sua faixa, de longe | Pular ou trocar de faixa |
+| COLETE | **Gancho** de baixo pra cima, derruba | Defender ou sair de perto |
+| REGATA | **Agarra e arremessa** o herói no chão | Esquiva antes de ele pegar |
+
+- Aviso "!" vermelho no preparo do carrinho, da faca e do agarrão (não dá pra defender); amarelo nos outros.

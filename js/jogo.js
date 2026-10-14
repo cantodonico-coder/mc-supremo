@@ -1080,7 +1080,7 @@ function emBriga(){
 function regraCalma(k){return ((P.musicaCalma||{})[k])||0;}
 function startPhase(){AU.musicaZera();_brigaOnda=-1;if(vidas<=1)vidas=regra("vidas",3);setTimeout(()=>{try{capangaSet(phaseIndex,0);capangaSet(phaseIndex,1);}catch(e){}preCarregaTipos();},60);preparaFase(phaseIndex);ckpt=null;montaPostes();Object.assign(est,{t:0,dano:0,pts0:score,cont:false});combo.max=0;notaFase=null;{const fph=P.phases[phaseIndex]||{};CUR_WORLD_LEN=fph.faseLen||Math.max(fph.worldLen||WORLD_LEN,CFG.FASE_LEN||0);}const band=bandFor(phaseIndex);player=newPlayer(band);enemy=newEnemy(P.phases[phaseIndex].hp,phaseIndex,band);enemy.state="espera";enemy.wx=CUR_WORLD_LEN+400;
   trackQueue=buildTrack(band);track=[];bonus=null;lastBonusPts=null;mooks=[];hudAlvo=null;comboReset();AU.setFuryTempo(false);
-  camX=0;sparks=[];rings=[];shots=[];fires=[];vinis=[];seq=[];timeLeft=99;
+  camX=0;sparks=[];rings=[];shots=[];fires=[];vinis=[];facasVoando=[];seq=[];timeLeft=99;
   invader=null;bannerT=0;agendaInvasao(true);planejaOndas();espalhaArmas();phaseResolved=false;scene="phase";fadeT=0.35;}
 // =====================================================================
 // CONTINUAR DO INICIO DA ONDA
@@ -1743,6 +1743,34 @@ function alvoAtras(p){let best=null,bd=1e9;for(const t of alvos()){if(t.grabbed|
   if(Math.abs(dx)<bd){bd=Math.abs(dx);best=t;}}return best;}
 function startGolpeTras(p){p.comboStep=0;p.atkFinisher=false;p.atrasGolpe=true;p.state="attack";p.atkT=SOCO_T()*1.1;p.atkDur=p.atkT;p.atkHit=false;p.skAnim=0;p.atkId=(p.atkId||0)+1;
   if(!AU.som("whoosh",1.2,0.9))AU.punch();AU.som("shapeClack",0.7);}
+// ===================== GOLPES ASSINATURA DOS CAPANGAS (padrao SoR) =====================
+function assinaturaDe(e){return e&&e.mook&&e.tipo&&P.assinaturas?P.assinaturas[e.tipo]:null;}
+function tentaAssinatura(e,p,dx,dy,dm){const a=assinaturaDe(e);if(!a||e.esperaVez||e.entered===false||(e.assCd||0)>0||e.cd>0||e.arma)return false;
+  const adx=Math.abs(dx),na=screenX(e.wx)>40&&screenX(e.wx)<W-40;if(!na)return false;
+  let ok=false;
+  if(a.golpe==="carrinho")ok=Math.abs(dy)<=CFG.ENEMY_ATK_Y&&adx>110*kX()/1.75&&adx<330*kX()/1.75&&(p.z||0)<10;
+  else if(a.golpe==="faca")ok=Math.abs(dy)<=30&&adx>200*kX()/1.75&&adx<620;
+  else if(a.golpe==="gancho")ok=Math.abs(dy)<=CFG.ENEMY_ATK_Y&&adx<=(CFG.ENEMY_HIT_X-5)*kX();
+  if(!ok)return false;
+  e.assCd=(a.cd||4)*(0.6+Math.random()*0.8);if(Math.random()>a.chance)return false;
+  e.state="windup";e.meleeType=a.golpe;e.rushDir=Math.sign(dx)||1;e.facing=e.rushDir;
+  e.windT=Math.max((a.golpe==="faca"?0.55:(a.golpe==="carrinho"?0.6:0.5))/Math.max(0.8,dm),CFG.TELEGRAPH_FRAMES/60);
+  if(a.golpe==="faca")e.facaY=p.y;
+  return true;}
+let facasVoando=[];
+function lancaFaca(e){const dir=e.rushDir||e.facing||1;facasVoando.push({wx:e.wx+dir*40,y:e.facaY||e.y,dir:dir,t:1.6,dono:e,hit:false});
+  if(!AU.som("whoosh",1.2,1.3))AU.punch();}
+function atualizaFacas(dt){const p=player;
+  for(const f of facasVoando){f.t-=dt;f.wx+=f.dir*700*dt;
+    if(!f.hit&&Math.abs(f.wx-p.wx)<32&&Math.abs(f.y-p.y)<=22&&(p.z||0)<60&&scene==="phase"){f.hit=true;f.t=0;
+      const ph=P.phases[f.dono.pi]||{},dB=(f.dono.dmgBase!=null)?f.dono.dmgBase:(ph.dmgSoco!=null?ph.dmgSoco:3);
+      _ultAtacante={tipo:"faca"};damagePlayer(Math.max(2,Math.round(dB*1.4*(f.dono.dmgMul||1))),f.wx-f.dir*40);}
+    if(f.wx<camX-80||f.wx>camX+W+80)f.t=0;}
+  facasVoando=facasVoando.filter(f=>f.t>0);}
+function drawFacas(){for(const f of facasVoando){const sx=screenX(f.wx),y=f.y-95*fatorObjetos();drawShadow(sx,f.y,0.35,0);
+  cx.save();cx.translate(sx,y);cx.scale(f.dir,1);cx.strokeStyle="#000";cx.lineWidth=6;cx.beginPath();cx.moveTo(-26,0);cx.lineTo(22,0);cx.stroke();
+  cx.strokeStyle="#d8dde4";cx.lineWidth=4;cx.beginPath();cx.moveTo(-4,0);cx.lineTo(22,0);cx.stroke();cx.strokeStyle="#5a3a22";cx.beginPath();cx.moveTo(-26,0);cx.lineTo(-6,0);cx.stroke();
+  cx.globalAlpha=0.5;cx.strokeStyle="#fff";cx.lineWidth=2;cx.beginPath();cx.moveTo(-60,0);cx.lineTo(-30,0);cx.stroke();cx.restore();}}
 function socoNoChao(p){const t=alvoColado(p,regra("agarraSocoX",22));if(t)return startGrabThrow(p,t);startComboHit(p);}
 function SOCO_T(){return regra("socoT",0.26);}function CHUTE_T(){return regra("chuteT",0.30);}
 function startComboHit(p){
@@ -2202,7 +2230,7 @@ function showBossSeqHint(tokens){
 }
 function hideBossSeqHint(){ if(bossSeqHintEl){ bossSeqHintEl.remove(); bossSeqHintEl=null; } }
 function seqEndsCustom(key){const s=POWER_SEQ[key];return seqEnds(s[0],s[1],s[2]);}
-function updateCombat(dt){est.t+=dt/GAME_SPEED;updatePlayer(dt);updateEnemy(dt);
+function updateCombat(dt){est.t+=dt/GAME_SPEED;updatePlayer(dt);updateEnemy(dt);atualizaFacas(dt);
   for(const m of mooks)updateEnemy(dt,m);
   mooks=mooks.filter(m=>!(m.state==="dead"&&m.deadT<=0));
   for(const pr of track)if(pr.flashT>0)pr.flashT-=dt;
@@ -2260,8 +2288,9 @@ function updatePlayer(dt){const p=player;
     press.punch=press.kick=press.skate=press.shoot=press.mkey=press.jump=false;
     if(p.presoT<=0){
       const dmg=p.__grabDmg||10,byWx=p.__grabByWx!==undefined?p.__grabByWx:p.wx;
-      p.__grabDmg=0;
+      p.__grabDmg=0;const arr=p.__grabArremessa;p.__grabArremessa=false;
       damagePlayer(dmg,byWx);
+      if(arr&&!(p.downT>0)&&scene==="phase"){derrubaMC(byWx);p.kbx=((p.wx>=byWx)?1:-1)*650;p.z=0;addDmgNum(p.wx,p.y-230,"ARREMESSADO!",true,"#ff5a4a");AU.som("queda");shake=Math.max(shake,16);}
     }
     return;
   }
@@ -2640,7 +2669,7 @@ function updateEnemy(dt,ent){const e=ent||enemy,p=player;if(e.state==="espera")r
   }
   const furyMul=(isBossHere&&e.enraged)?1.35:(isBossHere&&e.furyStage1)?1.15:1;
   if(e.flashT>0)e.flashT-=dt;
-  if(e.deitadoT>0)e.deitadoT-=dt;if(e.getupT>0)e.getupT-=dt;
+  if(e.deitadoT>0)e.deitadoT-=dt;if(e.getupT>0)e.getupT-=dt;if(e.assCd>0)e.assCd-=dt;
   if(e.grabbed&&e.state==="dead")e.grabbed=false;           // morreu no agarrao: solta (senao ficava pra sempre e a onda nao acabava)
   if(e.grabbed){e.kbx=0;e.vz=0;e.anim+=dt;return;} // preso no agarrao do MC
   // ARREMESSADO vira projetil: derruba quem estiver no caminho (Final Fight)
@@ -2744,6 +2773,7 @@ function updateEnemy(dt,ent){const e=ent||enemy,p=player;if(e.state==="espera")r
     const flanc=!!pf.costas&&Math.sign(e.wx-p.wx)===p.facing&&Math.abs(dx)<430*kX()&&e.entered!==false&&((e.flancoT=(e.flancoT||0)+dt)<2.2);
     e.esperaVez=!!e.mook&&!e.engajado;                       // so os engajados chegam perto (ver organizaCerco)
     if(tentaSequencia(e,dx))return;
+    if(tentaAssinatura(e,p,dx,dy,dm))return;
     // INVESTIDA (perfil): de media distancia, na mesma faixa, avisa e dispara em linha reta. ⤴️ pula por cima; sair da faixa desvia.
     if(inv&&e.cd<=0&&e.entered!==false&&!e.esperaVez&&!(e.fogeT>0)&&Math.abs(dy)<=CFG.ENEMY_ATK_Y&&Math.abs(dx)>150*kX()&&Math.abs(dx)<=inv.dist*kX()&&screenX(e.wx)>50&&screenX(e.wx)<W-50){
       e.state="windup";e.meleeType='rush';e.rushDir=Math.sign(dx)||1;
@@ -2808,8 +2838,15 @@ function updateEnemy(dt,ent){const e=ent||enemy,p=player;if(e.state==="espera")r
         applyPropCollision(e,Math.sign(dx)*sp*dt);
       }
       {const py0=e.y,dyT=ty-e.y;e.y+=Math.sign(dyT)*Math.min(Math.abs(dyT),sp*0.8*(pf.marca||1)*dt);e.y=Math.max(b.top,Math.min(b.bottom,e.y));bloqueiaY(e,py0);aplicaDegrau(e,py0,true,p.y);}}}
-  else if(e.state==="windup"){e.windT-=dt;if(e.windT<=0){e.state="attack";e.atkT=(e.meleeType==='rush'&&e.perfil&&e.perfil.investida)?e.perfil.investida.dur:0.32;e.atkHit=false;
+  else if(e.state==="windup"){e.windT-=dt;if(e.windT<=0){e.state="attack";e.atkT=(e.meleeType==='rush'&&e.perfil&&e.perfil.investida)?e.perfil.investida.dur:(e.meleeType==='carrinho'?0.5:(e.meleeType==='faca'?0.3:0.32));e.atkHit=false;
+      if(e.meleeType==='faca')lancaFaca(e);if(e.meleeType==='carrinho'){AU.som("meiofioBatida");}
       if(e.meleeType==='rush'&&e.perfil&&e.perfil.investida&&e.perfil.investida.salto&&e.z<=0)e.vz=e.perfil.investida.salto;}}
+  else if(e.state==="attack"&&(e.meleeType==='carrinho'||e.meleeType==='faca')){e.atkT-=dt;
+    if(e.meleeType==='carrinho'){e.facing=e.rushDir;applyPropCollision(e,e.rushDir*640*kX()/1.75*dt);
+      if(!e.atkHit&&Math.abs(p.wx-e.wx)<58*kX()/1.4&&Math.abs(p.y-e.y)<=CFG.ENEMY_HIT_Y+6&&(p.z||0)<28){e.atkHit=true;
+        const phD=P.phases[e.pi],dB=(e.dmgBase!=null)?e.dmgBase:((phD&&phD.dmgSoco!=null)?phD.dmgSoco:3);
+        _ultAtacante=e;damagePlayer(Math.max(1,Math.round(dB*1.2*(e.dmgMul||1))),e.wx);if(player.hurtT>0&&!(player.downT>0))derrubaMC(e.wx);}}
+    if(e.atkT<=0){e.state="approach";e.meleeType=null;e.cd=1.2/dm;if(e.mook)e.descansoT=regra("descanso",0.8);}}
   else if(e.state==="attack"&&e.meleeType==='rush'){const inv=(e.perfil&&e.perfil.investida)||{vel:600};
     e.atkT-=dt;e.facing=e.rushDir;applyPropCollision(e,e.rushDir*inv.vel*kX()*dt);
     if(!e.atkHit&&Math.abs(p.wx-e.wx)<62*kX()&&Math.abs(p.y-e.y)<=CFG.ENEMY_HIT_Y+3&&(inv.salto||(p.z||0)<40)){e.atkHit=true;
@@ -2836,14 +2873,16 @@ function updateEnemy(dt,ent){const e=ent||enemy,p=player;if(e.state==="espera")r
             p.guarding=false;p.guardChain=0;p.grinding=false;
             largaArma(p);p.presoT=0.5;p.state="presa";p.mvx=0;p.mvy=0;p.vz=0;p.z=0;
             p.__grabDmg=Math.max(1,Math.round((e.dmgBase!=null?e.dmgBase:dmgSoco)*1.6*(e.dmgMul||1)));p.__grabByWx=e.wx;
+            p.__grabArremessa=((assinaturaDe(e)||{}).golpe==='arremessa');if(p.__grabArremessa){p.presoT=0.7;addDmgNum(e.wx,e.y-210,"TE PEGUEI!",true,"#ff5a4a");}
             shake=Math.max(shake,10);AU.hurt();
           }
         }
       } else if(inReach(e,p,CFG.ENEMY_HIT_X+(pf.alcance||0)+(e.arma?((P.armas[e.arma.k]||{}).alcance||0)*0.7:0),CFG.ENEMY_HIT_Y+1)){e.atkHit=true;
         const dmgV=((e.dmgBase!=null)?e.dmgBase:((e.meleeType==='kick')?dmgChute:dmgSoco))*(e.arma&&e.meleeType!=='kick'?vilaoUsaArma(e):1);
         const smash=e.meleeType==='smash';
-        _ultAtacante=e;damagePlayer(Math.max(1,Math.round((smash?Math.max(dmgV*3,(phD&&phD.pancadaDmg)||8):dmgV)*(e.dmgMul||1))),e.wx);
+        _ultAtacante=e;damagePlayer(Math.max(1,Math.round((smash?Math.max(dmgV*3,(phD&&phD.pancadaDmg)||8):dmgV)*(e.meleeType==='gancho'?1.4:1)*(e.dmgMul||1))),e.wx);
         if(smash&&player.hurtT>0&&!(player.downT>0)&&scene==="phase"){derrubaMC(e.wx);shake=Math.max(shake,16);}
+        if(e.meleeType==='gancho'&&player.hurtT>0&&!(player.downT>0)&&scene==="phase"){derrubaMC(e.wx);shake=Math.max(shake,14);addDmgNum(player.wx,player.y-230,"GANCHO!",true,"#ff5a4a");}
         if(pf.empurra&&player.hurtT>0&&!(player.downT>0))player.kbx=(Math.sign(player.wx-e.wx)||1)*pf.empurra; // EMPURRAO: joga o MC longe
       }
     }
@@ -3173,6 +3212,9 @@ function posePalito(a){
   if(e.state==="breathwind"||e.state==="vinilwind"){P0.lean=-10;P0.aF=[-30,-60];P0.aB=[-40,-50];return P0;}
   if(e.state==="breath"||e.state==="vinil"){P0.lean=12;P0.aF=[95,0];P0.aB=[85,0];return P0;}
   if(e.state==="windup"){
+    if(mt==='carrinho'){P0.hip=0.38;P0.lean=18;P0.aF=[60,40];P0.aB=[-50,40];P0.fF=[0.12,0];P0.fB=[-0.12,0];return P0;}
+    if(mt==='faca'){P0.lean=-12;P0.aF=[-150,30];P0.aB=[50,60];P0.fF=[0.1,0];P0.fB=[-0.12,0];return P0;}
+    if(mt==='gancho'){P0.hip=0.4;P0.lean=10;P0.aF=[-25,100];P0.aB=[40,90];return P0;}
     if(mt==='kick'){P0.lean=-10;P0.fF=[0.1,-0.16];return P0;}
     if(mt==='jump'){P0.hip=0.36;P0.aF=[-30,40];P0.aB=[-40,40];return P0;}
     if(mt==='grab'){P0.lean=6;P0.aF=[75,-10];P0.aB=[-60,30];return P0;}
@@ -3180,6 +3222,9 @@ function posePalito(a){
     if(mt==='smash'){P0.lean=-12;P0.aF=[175,0];P0.aB=[170,10];return P0;}
     P0.lean=-14;P0.hip=0.45;P0.aF=[-55,-85];P0.aB=[40,85];P0.fB=[-0.1,0];return P0;}
   if(e.state==="attack"){
+    if(mt==='carrinho'){P0.hip=0.16;P0.lean=-58;P0.head=8;P0.aF=[-20,10];P0.aB=[-150,10];P0.fF=[0.38,-0.05];P0.fB=[0.22,-0.02];P0.trilha="pe";P0.forca=1;return P0;}
+    if(mt==='faca'){P0.lean=18;P0.aF=[100,-5];P0.aB=[-30,50];P0.fF=[0.14,0];return P0;}
+    if(mt==='gancho'){P0.hip=0.47;P0.lean=4;P0.aF=[168,-8];P0.aB=[30,80];P0.trilha="mao";P0.forca=1;return P0;}
     if(mt==='kick'){P0.lean=-18;P0.fF=[0.36,-0.24];P0.aF=[40,60];P0.aB=[-30,40];P0.trilha="pe";P0.forca=1;return P0;}
     if(mt==='grab'){P0.lean=14;P0.aF=[85,10];P0.aB=[80,15];return P0;}
     if(mt==='rush'){P0.lean=30;P0.hip=0.42;P0.aF=[80,0];P0.aB=[-30,30];const ph=t*12;P0.fF=[0.14*Math.sin(ph),0];P0.fB=[-0.14*Math.sin(ph),0];return P0;}
@@ -3277,7 +3322,7 @@ function drawActor(a,fr,z,dead){if(!fr||!fr.img)return;
   if(a.flashT>0){const fl=flashOf(fr);if(fl){cx.globalAlpha=Math.min(1,a.flashT/0.14);cx.drawImage(fl,dx,dy,dw,dh);}}
   cx.restore();avisoGolpe(a,sx,dy-6);if(a!==player&&a.arma&&!dead)desenhaArmaSprite(a.arma.k,sx+(a.facing||1)*dw*0.28,a.y-z-dh*0.5,escalaArma(a.y),-1.15,(a.facing||1)<0);}
 // "!" piscando em cima do vilao que vai bater: amarelo = da pra defender, vermelho = agarrao (nao defende)
-function avisoGolpe(a,x,y){if(a===player||a.state!=="windup")return;const v=a.meleeType==='grab',pul=0.85+0.15*Math.sin(performance.now()/40);
+function avisoGolpe(a,x,y){if(a===player||a.state!=="windup")return;const v=a.meleeType==='grab'||a.meleeType==='carrinho'||a.meleeType==='faca',pul=0.85+0.15*Math.sin(performance.now()/40);
   cx.save();cx.font="900 "+Math.round(34*pul)+"px monospace";cx.textAlign="center";cx.lineWidth=5;cx.strokeStyle="#000";cx.fillStyle=v?"#ff3b30":"#ffd43b";
   cx.strokeText("!",x,y);cx.fillText("!",x,y);cx.restore();}
 // banco de praca desenhado no codigo (ferro verde + ripas de madeira), sem arte externa
@@ -3604,7 +3649,7 @@ function drawPhase(dt){drawPhaseBg();
     else drawActor(invader,enFrame(invader),invader.z||0,invader.state==="dead");}
   drawSmoke();
   drawPostesEmenda(false);  // cone de luz por cima: quem passa embaixo fica iluminado
-  drawVinis();drawFires();drawFireTelegraph();drawBrechas();
+  drawVinis();drawFacas();drawFires();drawFireTelegraph();drawBrechas();
   drawRings();drawShots();drawSparks();drawBursts();drawPostes();cx.restore();
   drawDmgNums();drawFlashOverlay();
   cx.save();hudTopo();drawCombatHUD(dt);drawInvaderHUD();drawBannerInvasao(dt);drawGo();drawComboHUD(118);drawTutorial();cx.restore();}
