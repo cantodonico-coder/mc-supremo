@@ -308,3 +308,4 @@ O jogo tem manifesto (`manifest.webmanifest`) e ícones em `assets/ui/icone-*.pn
 
 - Repetir a mesma não conta ("JÁ FEZ ESSA!"). No bônus aparece a lista das 5 com ✔ nas feitas.
 - As mesmas 5 manobras valem em qualquer slide (meio-fio, banco, esteira, microfone). Fazer as 5 no mesmo slide = COMBO DE MANOBRAS.
+- **Sons de skate extras:** `ollie` (estalo do shape no pulo), `shape-clack` (chute e voadora), `meiofio-batida` (entrando no slide do meio-fio/degrau), `slide-freio` (saindo do slide), `pouso-2` (alterna com o pouso).

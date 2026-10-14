@@ -146,3 +146,7 @@ P.regras = Object.assign(P.regras,{"slideCabecaCusto":0.08,"slideCabecaEspera":4
 // Fluidez: soco/chute mais curtos e encadeaveis; agarrao automatico ao andar colado no vilao (padrao SoR).
 // Vilao com arma: chance de ir buscar arma do chao, dano extra e solta ao cair.
 P.regras = Object.assign(P.regras,{"socoT":0.26,"chuteT":0.30,"agarraAndando":0.16,"vilaoPegaArma":0.6,"vilaoArmaDano":0.7,"vilaoArmaBusca":420});
+
+// sons de skate extras
+Object.assign(P.sons,{"ollie": ["assets/sons/ollie.mp3"], "shapeClack": ["assets/sons/shape-clack.mp3", "assets/sons/shape-clack-2.mp3"], "meiofioBatida": ["assets/sons/meiofio-batida.mp3"], "slideFreio": ["assets/sons/slide-freio.mp3"], "pouso2": ["assets/sons/pouso-2.mp3"]});
+Object.assign(P.sonsVol,{"ollie": 0.8, "shapeClack": 0.7, "meiofioBatida": 0.7, "slideFreio": 0.45, "pouso2": 0.6});

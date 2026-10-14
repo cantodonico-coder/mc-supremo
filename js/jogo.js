@@ -1767,7 +1767,7 @@ function startFlyingKick(p){
   p.escaping=false;
   p.airAtk=true;p.airHit=false;p.skating=true;p.state="skate";p.skAnim=0;p.comboStep=0;
   tut.voadora=true;p.airStep=1;p.airFinisher=CFG.AIR_COMBO_HITS<=1;p.airBuf=false;p.airNextT=0;
-  p.mvx=p.facing*CFG.FLYKICK_VX;AU.kickHit();}
+  p.mvx=p.facing*CFG.FLYKICK_VX;AU.kickHit();AU.som("shapeClack",0.8);}
 // 👊/🦵 NO AR: 1o toque = voadora; toques seguidos depois de acertar = hits do COMBO AEREO (ultimo derruba)
 function golpeNoAr(p){
   if(!p.airAtk){startFlyingKick(p);return;}
@@ -1816,7 +1816,7 @@ function pertoDegrau(p){const dg=degrauFase();return !!dg&&degrauAtivo(dg,p.wx)&
 function pertoMeioFio(p){const b=curBand();return pertoDegrau(p)||Math.min(Math.abs(p.y-b.top),Math.abs(p.y-b.bottom))<=CFG.CURB_MARGIN;}
 function alturaCabeca(t){const fr=enFrame(t);const porte=t.sizeMul||(IMG.phases[t.pi]&&IMG.phases[t.pi].sizeMul)||1;
   return (fr?Math.max(80,fr.h*dscale(t.y)*escalaChar()*porte*0.9):160)/kZ();}
-function startGrind(p,mode,tgt){AU.som("pouso",0.7);AU.somLoop(mode==="prop"?"slideMetal":"slidePedra",true);
+function startGrind(p,mode,tgt){AU.som(mode==="meiofio"?"meiofioBatida":"pouso",0.8);AU.somLoop(mode==="prop"?"slideMetal":"slidePedra",true);
   p.grindMode=mode;p.grindTgt=tgt||null;p.grindT=0;p.grindDir=p.facing||1;p.grindTick=0.05;p.grindHits=0;p.grindHitSet=[];
   p.grinding=true;p.skating=true;p.state="skate";p.airAtk=false;p.airHit=false;p.escaping=false;p.vz=0;p.mvy=0;p.skAnim=0;
   p.comboStep=0;p.atkT=0;p.kickT=0;
@@ -1827,8 +1827,8 @@ function startGrind(p,mode,tgt){AU.som("pouso",0.7);AU.somLoop(mode==="prop"?"sl
   else if(mode==="prop"){p.z=tgt.perfil?topDe(tgt,p.wx):(p.grindZ||tgt.topH);p.__onProp=tgt;p.y=tgt.y;}
   else if(mode==="cabeca"){p.grindOff=p.wx-tgt.wx;p.y=tgt.y;p.z=alturaCabeca(tgt);p.__onProp=null;}
   tut.slide=true;shake=Math.max(shake,4);AU.jumpSfx();vib(15);addDmgNum(p.wx,p.y-p.z-120,"SLIDE!",false,"#bfe8ff");}
-function endGrind(p,ollie){const m=p.grindMode;AU.somLoop("slideMetal",false);AU.somLoop("slidePedra",false);if(!ollie)AU.som("pouso",0.8);p.grindZ=null;p.grindMode=null;p.grindTgt=null;p.grinding=false;p.manobra=null;p.hopT=0;
-  if(ollie){p.vz=CFG.JUMP_VZ*0.9;p.jumpsUsed=1;p.escapeUsed=false;p.lastJumpTap=performance.now();p.state="jump";AU.jumpSfx();}
+function endGrind(p,ollie){const m=p.grindMode;AU.somLoop("slideMetal",false);AU.somLoop("slidePedra",false);if(!ollie){AU.som("pouso",0.8);AU.som("slideFreio");}p.grindZ=null;p.grindMode=null;p.grindTgt=null;p.grinding=false;p.manobra=null;p.hopT=0;
+  if(ollie){p.vz=CFG.JUMP_VZ*0.9;p.jumpsUsed=1;p.escapeUsed=false;p.lastJumpTap=performance.now();p.state="jump";if(!AU.som("ollie"))AU.jumpSfx();}
   else if(m==="cabeca"){p.vz=CFG.GRIND_HOP_VZ;p.jumpsUsed=1;p.state="jump";}
   else if(m==="meiofio"){p.skating=false;p.state="land";p.landT=0.12;p.jumpsUsed=0;}
   else if(m==="prop"&&p.__onProp){p.skating=false;p.state="idle";}   // soltou em cima do banco/carro: fica em pe
@@ -2281,7 +2281,7 @@ function updatePlayer(dt){const p=player;
     if(noAr)golpeNoAr(p);
     else if(p.arma&&p.atkT<=0&&p.kickT<=0&&p.throwT<=0&&!(p.armaT>0))arremessaArma(p);
     else if(p.atkT>0&&!p.arma){p.bufKickT=1;}
-    else if(p.atkT<=0&&p.kickT<=0&&p.throwT<=0&&!(p.armaT>0)){p.comboStep=0;p.bufPunchT=0;p.bufKickT=0;p.state="kick";p.kickT=CHUTE_T();p.kickHit=false;p.skAnim=0;p.atkId=(p.atkId||0)+1;AU.kickHit();}}
+    else if(p.atkT<=0&&p.kickT<=0&&p.throwT<=0&&!(p.armaT>0)){p.comboStep=0;p.bufPunchT=0;p.bufKickT=0;p.state="kick";p.kickT=CHUTE_T();p.kickHit=false;p.skAnim=0;p.atkId=(p.atkId||0)+1;AU.kickHit();AU.som("shapeClack");}}
   // ===== 👊 SOCO: longe = combo automatico com o skate; colado (X e Y) = agarrao + arremesso =====
   if(press.punch){press.punch=false;
     const noAr=(p.z>(p.__onProp?topDe(p.__onProp,p.wx):0)+1)||p.vz>0;
@@ -2383,7 +2383,7 @@ function updatePlayer(dt){const p=player;
       if(grounded||(p.coyoteT>0&&p.jumpsUsed===0)){
         // 1o toque: pulo normal, guarda o instante pra medir o toque duplo
         p.vz=CFG.JUMP_VZ;p.state="jump";p.jumpsUsed=1;p.grinding=false;p.coyoteT=0;
-        p.escapeUsed=false;p.lastJumpTap=tapT;AU.jumpSfx();}
+        p.escapeUsed=false;p.lastJumpTap=tapT;if(!AU.som("ollie"))AU.jumpSfx();}
       else if(p.jumpsUsed===1&&!p.escapeUsed&&!p.airAtk&&tapT-p.lastJumpTap<=CFG.DOUBLE_TAP_MS){
         // 2o toque em ate 250 ms: SALTO DE FUGA
         startEscapeJump(p,dx);}
@@ -2476,7 +2476,7 @@ function updatePlayer(dt){const p=player;
       if(grindProp)startGrind(p,"prop",p.__onProp);
       else if(grindMF)startGrind(p,"meiofio");
       else{
-        p.landT=0.14;p.state="land";p.skating=false;p.grinding=false;AU.som("pouso");
+        p.landT=0.14;p.state="land";p.skating=false;p.grinding=false;AU.som(Math.random()<0.5?"pouso":"pouso2");
       }
       p.mvy=0;if(p.escaping){p.isInvincible=false;p.invincibleTimer=0;}p.escaping=false; // tocou o chao: fim da invencibilidade
     }}
