@@ -1556,7 +1556,7 @@ function arremessaArma(p){
 function golpeDeArma(p){const d=P.armas[p.arma.k],reach=CFG.PUNCH_RANGE_X+(d.alcance||0);let acertou=false;
   if(quebraVinis(p,HERO().reachSoco))acertou=true;
   if(bateNoCarro(p,reach*kX()))acertou=true;
-  for(const t of alvos()){if(t.grabbed||!inReach(p,t,reach,CFG.PUNCH_RANGE_Y+8))continue;acertou=true;
+  for(const t of alvos()){if(t.grabbed||!naFrente(p,t,reach,CFG.PUNCH_RANGE_Y+6,CFG.PUNCH_RANGE_Z))continue;acertou=true;
     damageEnemy(Math.round(HERO().dmgSoco*(d.dano||2)),d.derruba?CFG.FINISHER_KB:520,0.5,null,t,'soco');
     if(d.derruba&&t.state!=="dead")t.vz=Math.max(t.vz||0,380);
     impactBurst(t.wx,t.y-110,"#fff2c0",true);}
@@ -1610,8 +1610,8 @@ function soltaEspecial(p){
   p.iframes=Math.max(p.iframes||0,0.62);press.punch=press.kick=false;
   addDmgNum(p.wx,p.y-225,"GIRO 360!",true,"#ffcf33");if(!AU.som("especial"))AU.power();AU.som("giro");shake=Math.max(shake,10);vib([20,30,40]);tut.especial=true;
   for(let i=0;i<3;i++)rings.push({wx:p.wx,y:p.y,r:20+i*26,t:0.45,c:"#ffcf33"});}
-function golpeEspecial(p){const R=regra("especialRaio",150)*kX();
-  for(const t of alvos()){if(t.grabbed||Math.abs(t.wx-p.wx)>R||Math.abs(t.y-p.y)>46)continue;
+function golpeEspecial(p){const R=alc("especial",85)*kX();
+  for(const t of alvos()){if(t.grabbed||Math.abs(t.wx-p.wx)>R||Math.abs(t.y-p.y)>alc("especialProf",34))continue;
     if(t.__espId===p.atkId)continue;t.__espId=p.atkId;t.guarding=false;t.guardT=0; // o giro fura a guarda
     damageEnemy(Math.round(HERO().dmgSoco*regra("especialDano",2.5)),CFG.FINISHER_KB,0.9,null,t,'especial');
     if(t.state!=="dead"){t.vz=Math.max(t.vz||0,420);t.kbx=(Math.sign(t.wx-p.wx)||1)*Math.abs(t.kbx||900);}
@@ -1782,7 +1782,7 @@ function updateGrind(p,dt){
       p.z=(p.grindZ||pr.topH)+pulinhoManobra(p);p.__onProp=pr;
     }else{ // meio-fio: tromba e empurra quem estiver no caminho
       for(const t of alvos()){if(p.grindHitSet.includes(t))continue;
-        if(Math.abs(t.wx-p.wx)<70*kX()&&Math.abs(t.y-p.y)<40&&(t.z||0)<20){p.grindHitSet.push(t);
+        if(Math.abs(t.wx-p.wx)<alc("slide",48)*kX()&&Math.abs(t.y-p.y)<=alc("chuteProf",20)+6&&(t.z||0)<20){p.grindHitSet.push(t);
           damageEnemy(Math.round(HERO().dmgChute*(p.manobra==="baixo"?1.5:1)),CFG.KICK_KNOCKBACK,0.6,null,t,'chute');}}
       p.z=pulinhoManobra(p);
       if(!p.grindDegrau&&p.grindT>CFG.GRIND_MAX_MEIOFIO+(p.grindExtra||0)){endGrind(p,false);return;} // no degrau: slide por toda a borda
@@ -2084,7 +2084,7 @@ function updatePlayer(dt){const p=player;
   clampPlayerX(p);
   if(p.dashT>0){p.dashT-=dt;applyPropCollision(p,p.dashVX*dt);p.dashVX*=Math.pow(0.02,dt);
     quebraVinis(p,130);if(bateNoCarro(p,130))p.dashHit=true;
-    if(!p.dashHit){const alvo=alvos().find(t=>Math.abs(t.wx-p.wx)<95&&Math.abs(t.y-p.y)<58);
+    if(!p.dashHit){const alvo=alvos().find(t=>naFrente(p,t,alc("dash",55),alc("dashProf",26)));
       if(alvo){p.dashHit=true;damageEnemy(18,340,0.5,null,alvo);}}
     if(p.dashT<=0)p.skating=false;p.anim+=dt;return;}
   if(p.guardT>0){p.guardT-=dt;if(p.guardT<=0){p.guarding=false;p.guardT=0;}}
@@ -2207,8 +2207,8 @@ function updatePlayer(dt){const p=player;
   if(p.kickT>0){p.kickT-=dt;
     if(!p.kickHit&&p.kickT<0.24&&p.kickT>0.10){
       if(quebraVinis(p,HERO().reachChute))p.kickHit=true;
-      if(bateNoCarro(p,HERO().reachChute))p.kickHit=true;
-      const alvo=alvoEmAlcance(p,HERO().reachChute,HERO().depthChute);
+      if(bateNoCarro(p,alc("chute",62)*kX()))p.kickHit=true;
+      let alvo=null,bd=1e9;for(const t of alvos()){if(t.grabbed||!naFrente(p,t,alc("chute",62),alc("chuteProf",20),CFG.PUNCH_RANGE_Z))continue;const d=Math.abs(t.wx-p.wx);if(d<bd){bd=d;alvo=t;}}
       if(alvo){p.kickHit=true;damageEnemy(HERO().dmgChute,CFG.KICK_KNOCKBACK,0.30,null,alvo,'chute');}}
     if(p.kickT<=0)p.state="idle";
     p.anim+=dt;return;}
@@ -2282,7 +2282,7 @@ function updatePlayer(dt){const p=player;
   // Cada queda em cima conta um acerto novo (airHit e rearmado a cada pulo).
   if(p.z>0&&p.vz<0&&(p.skating||p.airAtk)&&!p.stompHit){
     const h=HERO();
-    const vit=alvos().find(t=>t.state!=="dead"&&Math.abs(t.wx-p.wx)<h.reachAr*kX()*0.9&&Math.abs(t.y-p.y)<h.depthAr&&sameLane(p.y,t.y));
+    const vit=alvos().find(t=>t.state!=="dead"&&Math.abs(t.wx-p.wx)<alc("ar",58)*kX()*0.8&&Math.abs(t.y-p.y)<=alc("arProf",24));
     if(vit&&held.kick&&p.skating){startGrind(p,"cabeca",vit);p.anim+=dt;return;}
     if(vit){
       p.stompHit=true;p.airHit=true;
@@ -2298,7 +2298,7 @@ function updatePlayer(dt){const p=player;
     if(!p.airHit)quebraVinis(p,h.reachAr);
     if(!p.airHit&&bateNoCarro(p,h.reachAr))p.airHit=true;
     if(p.airNextT>0)p.airNextT-=dt;
-    const alvo=!p.airHit&&!(p.airNextT>0)&&alvos().find(t=>Math.abs(t.wx-p.wx)<h.reachAr*kX()&&Math.abs(t.y-p.y)<h.depthAr);
+    const alvo=!p.airHit&&!(p.airNextT>0)&&alvos().find(t=>naFrente(p,t,alc("ar",58),alc("arProf",24))&&(p.z||0)<=alturaCabeca(t)*1.15);
     if(alvo){p.airHit=true;
       const decMul=Math.max(0.5,1-0.2*(p.airComboN||0));p.airComboN=(p.airComboN||0)+1;
       const dmgA=Math.max(1,Math.round(h.dmgAr*decMul));
@@ -2891,9 +2891,12 @@ function drawShadow(sx,y,sc,z){const w=112*sc*(1-Math.min(z/260,0.4));cx.save();
 function escalaChar(){return (P.regras&&P.regras.escalaBonecos)||CFG.ESCALA_PERSONAGENS||1.7;} // escalaBonecos (dados.js) manda; o Admin continua valendo se tirar a linha
 // distancias horizontais de golpe acompanham o tamanho na tela (valores do Admin valem pra escala 0.8 original)
 function kX(){return escalaChar()/0.8;}
+function alc(k,def){const a=P.alcance||{},v=a[k];if(v&&typeof v==="object")return v[(typeof heroKey!=="undefined"&&heroKey)||"abacaxi"]||v.abacaxi||def;return v!=null?v:def;}
+// alvo na frente do heroi (ou colado), dentro de X e da profundidade
+function naFrente(p,t,x,prof,dz){const dx=t.wx-p.wx;return (Math.abs(dx)<8||Math.sign(dx)===p.facing)&&Math.abs(dx)<=x*kX()&&Math.abs(t.y-p.y)<=prof&&(dz==null||Math.abs((t.z||0)-(p.z||0))<=dz);}
 // altura na tela (pulo, voadora, fuga, props): mesmo tempo de pulo, desenho mais alto
 // fatorObjetos: objetos e altura de pulo acompanham o tamanho dos bonecos (escalaBonecos / 1.7 de antes)
-function fatorObjetos(){const e=P.regras&&P.regras.escalaBonecos;return e?e/1.7:1;}
+function fatorObjetos(){const e=P.regras&&(P.regras.escalaObjetos||P.regras.escalaBonecos);return e?e/1.7:1;}
 function kZ(){return (CFG.ESCALA_ALTURA||1.6)*fatorObjetos();}
 
 // =====================================================================

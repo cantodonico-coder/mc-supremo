@@ -247,3 +247,13 @@ O jogo tem manifesto (`manifest.webmanifest`) e ícones em `assets/ui/icone-*.pn
   - Fundo: `corvos` na Redenção (`P.sonsAmbiente`).
 - Aberto direto do disco (sem servidor) os mp3 não carregam, e o jogo usa os sons sintetizados de antes.
 - Não usados por enquanto (originais com você): correndo, espirro, pedra na água, skate parado, skate no parque, passando no meio-fio.
+
+## Bonecos 20% menores e hitbox justa (out/2026)
+
+- `escalaBonecos` caiu de 1.4 para 1.12 (20% menor). Objetos, pulo e degraus continuam do mesmo tamanho (`escalaObjetos` 1.4).
+- **Hitbox:** o golpe só acerta quem está **na frente** do herói, perto e na mesma profundidade. A tabela fica em `P.alcance` no fim de `js/dados.js` (px de mundo; acompanha o tamanho dos bonecos).
+  - Soco: alcança ~70 px na tela.
+  - Chute: ~87 px (antes chegava a ~320).
+  - Golpe no ar: ~80 px, só na mesma faixa da calçada (antes valia a calçada inteira na profundidade).
+  - Giro 360: raio ~120 px (antes ~260).
+  - Slide e investida: encostando.

@@ -104,7 +104,7 @@ P.regras = Object.assign(P.regras||{},{"armasPorFase":2,"armaDropPct":0.35});
 // anelDist / anelPasso = distancia em que os que esperam a vez ficam do heroi (o 1o, e quanto a mais cada seguinte)
 // ESCALA ESTILO STREETS OF RAGE: boneco quase do mesmo tamanho no fundo e na frente da calcada (escalaFundo/escalaFrente)
 // e faixa de andar rasa (faixaMax = altura maxima em px; fases com degrau ficam como estao) · escalaBonecos = tamanho dos personagens (era 1.7) · chaoMax = linha mais baixa onde o pe pode ficar (tela tem 720)
-P.regras = Object.assign(P.regras,{"escalaFundo":0.92,"escalaFrente":1.0,"faixaMax":210,"escalaBonecos":1.4,"chaoMax":680});
+P.regras = Object.assign(P.regras,{"escalaFundo":0.92,"escalaFrente":1.0,"faixaMax":210,"escalaBonecos":1.12,"escalaObjetos":1.4,"chaoMax":680});
 P.regras = Object.assign(P.regras,{"maxNaTela":4,"descanso":0.8,"anelDist":250,"anelPasso":120});
 P.regras = Object.assign(P.regras,{"especialSegura":0.5,"especialCusto":0.08,"especialVolta":2,"especialDano":2.5,"especialRaio":150});
 // JAY: golpe novo, pancada de shape de cima pra baixo (aviso longo, forte, derruba)
@@ -129,3 +129,7 @@ P.objetosFase = {"JAY": {"sempre": 1, "banco": [{"src": "assets/props/cervejaria
 P.sons = {"soco": ["assets/sons/soco.mp3"], "forte": ["assets/sons/forte.mp3", "assets/sons/forte-2.mp3"], "heroiForca": ["assets/sons/heroi-forca.mp3", "assets/sons/heroi-forca-2.mp3"], "vilaoAi": ["assets/sons/vilao-ai.mp3"], "vilaoKo": ["assets/sons/vilao-ko.mp3"], "mulherAi": ["assets/sons/mulher-ai.mp3"], "queda": ["assets/sons/queda.mp3"], "quebra": ["assets/sons/quebra.mp3"], "armaChao": ["assets/sons/arma-chao.mp3"], "splash": ["assets/sons/splash.mp3"], "faca": ["assets/sons/faca.mp3", "assets/sons/faca-2.mp3"], "whoosh": ["assets/sons/whoosh.mp3"], "giro": ["assets/sons/giro.mp3"], "especial": ["assets/sons/especial.mp3"], "tiro": ["assets/sons/tiro.mp3"], "gameOver": ["assets/sons/game-over.mp3"], "rugido": ["assets/sons/rugido.mp3", "assets/sons/rugido-2.mp3"], "pouso": ["assets/sons/pouso.mp3"], "pegaArma": ["assets/sons/pega-arma.mp3"], "slideMetal": ["assets/sons/slide-metal.mp3"], "slidePedra": ["assets/sons/slide-pedra.mp3"], "rodinhas": ["assets/sons/rodinhas.mp3"], "corvos": ["assets/sons/corvos.mp3"]};
 P.sonsVol = {"soco": 0.9, "forte": 1.0, "heroiForca": 0.7, "vilaoAi": 0.6, "vilaoKo": 0.75, "mulherAi": 0.6, "queda": 0.85, "quebra": 0.8, "armaChao": 0.6, "splash": 0.7, "faca": 0.85, "whoosh": 0.35, "giro": 0.7, "especial": 0.75, "tiro": 0.5, "gameOver": 1.0, "rugido": 0.7, "pouso": 0.55, "pegaArma": 0.7, "slideMetal": 0.55, "slidePedra": 0.5, "rodinhas": 0.22, "corvos": 0.25};
 P.sonsAmbiente = {"OLD T": "corvos"};
+
+// P.alcance = HITBOX dos golpes do heroi (px de mundo; multiplica pelo tamanho dos bonecos, entao acompanha a escala).
+// X = distancia pra frente; prof = diferenca maxima de profundidade (px de tela, faixa da calcada); so acerta quem esta NA FRENTE.
+P.alcance = {"chute":{"abacaxi":62,"nico":68},"chuteProf":20,"ar":{"abacaxi":58,"nico":64},"arProf":24,"especial":85,"especialProf":34,"slide":48,"dash":55,"dashProf":26};
