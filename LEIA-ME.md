@@ -269,3 +269,8 @@ O jogo tem manifesto (`manifest.webmanifest`) e ícones em `assets/ui/icone-*.pn
   - Gasômetro: água batendo e passarinhos.
   - Palco final (Cidreira): mar, passarinhos e pessoas.
 - Para trocar por gravação de verdade: coloque o mp3 em `assets/sons/`, registre em `P.sons` (ex.: `"mar":["assets/sons/mar.mp3"]`) e use o nome em `P.ambiente`. Arquivo registrado com o mesmo nome toma o lugar do sintetizado.
+- A música agora espera o **primeiro capanga aparecer na tela** (antes entrava no aviso "CAPANGAS!", com eles ainda fora da tela). Chefe: quando ele entra na tela.
+
+## Slide na cabeça do vilão tem preço (out/2026)
+
+- Cada slide na cabeça custa **8% da vida máxima** (não mata: para em 1) e só pode de novo depois de **4 s**. Ajuste em `slideCabecaCusto` e `slideCabecaEspera` (fim de `js/dados.js`).

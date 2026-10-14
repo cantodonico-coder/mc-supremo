@@ -1062,9 +1062,18 @@ function preparaFase(i){
     [IMG.abacaxiParty,IMG.nicoBeach,IMG.nicoNessa].forEach(im=>im&&im._carregar&&im._carregar());
     AU.prepara("creditos");}
 }
-function emBriga(){return waveAtiva||(bossSpawned&&enemy&&enemy.state!=="dead"&&enemy.state!=="espera")||!!invader;}
+// BRIGA = tem inimigo vivo DENTRO DA TELA. Depois que a onda engata, a musica segue ate a onda acabar.
+let _brigaOnda=-1;
+function naTela(e){return e&&e.wx>camX-20&&e.wx<camX+W+20;}
+function emBriga(){
+  if(bossSpawned&&enemy&&enemy.state!=="dead"&&enemy.state!=="espera"&&naTela(enemy))return true;
+  if(invader&&invader.state!=="dead"&&naTela(invader))return true;
+  if(!waveAtiva)return false;
+  if(_brigaOnda===ondaIdx)return true;
+  if(mooks.some(m=>m.state!=="dead"&&naTela(m))){_brigaOnda=ondaIdx;return true;}
+  return false;}
 function regraCalma(k){return ((P.musicaCalma||{})[k])||0;}
-function startPhase(){AU.musicaZera();if(vidas<=1)vidas=regra("vidas",3);setTimeout(()=>{try{capangaSet(phaseIndex,0);capangaSet(phaseIndex,1);}catch(e){}preCarregaTipos();},60);preparaFase(phaseIndex);ckpt=null;montaPostes();Object.assign(est,{t:0,dano:0,pts0:score,cont:false});combo.max=0;notaFase=null;{const fph=P.phases[phaseIndex]||{};CUR_WORLD_LEN=fph.faseLen||Math.max(fph.worldLen||WORLD_LEN,CFG.FASE_LEN||0);}const band=bandFor(phaseIndex);player=newPlayer(band);enemy=newEnemy(P.phases[phaseIndex].hp,phaseIndex,band);enemy.state="espera";enemy.wx=CUR_WORLD_LEN+400;
+function startPhase(){AU.musicaZera();_brigaOnda=-1;if(vidas<=1)vidas=regra("vidas",3);setTimeout(()=>{try{capangaSet(phaseIndex,0);capangaSet(phaseIndex,1);}catch(e){}preCarregaTipos();},60);preparaFase(phaseIndex);ckpt=null;montaPostes();Object.assign(est,{t:0,dano:0,pts0:score,cont:false});combo.max=0;notaFase=null;{const fph=P.phases[phaseIndex]||{};CUR_WORLD_LEN=fph.faseLen||Math.max(fph.worldLen||WORLD_LEN,CFG.FASE_LEN||0);}const band=bandFor(phaseIndex);player=newPlayer(band);enemy=newEnemy(P.phases[phaseIndex].hp,phaseIndex,band);enemy.state="espera";enemy.wx=CUR_WORLD_LEN+400;
   trackQueue=buildTrack(band);track=[];bonus=null;lastBonusPts=null;mooks=[];hudAlvo=null;comboReset();AU.setFuryTempo(false);
   camX=0;sparks=[];rings=[];shots=[];fires=[];vinis=[];seq=[];timeLeft=99;
   invader=null;bannerT=0;agendaInvasao(true);planejaOndas();espalhaArmas();phaseResolved=false;scene="phase";fadeT=0.35;}
@@ -2155,6 +2164,7 @@ function updatePlayer(dt){const p=player;
   if(p.iframes>0)p.iframes-=dt;if(p.flashT>0)p.flashT-=dt;p.skAnim+=dt;
   // relogio REAL: dt do jogo ja vem multiplicado por GAME_SPEED (0.72), entao divide de volta
   if(p.isInvincible){p.invincibleTimer-=dt/GAME_SPEED;if(p.invincibleTimer<=0){p.isInvincible=false;p.invincibleTimer=0;}}
+  if(p.cabecaEsperaT>0)p.cabecaEsperaT-=dt;
   if(p.guardChainT>0){p.guardChainT-=dt;if(p.guardChainT<=0)p.guardChain=0;}
   if(p.skateComboT>0)p.skateComboT-=dt; // janela curta de pulo+ataque = manobra de skate
   if(p.kbx!==0){applyPropCollision(p,p.kbx*dt);p.kbx*=Math.pow(0.0001,dt);if(Math.abs(p.kbx)<6)p.kbx=0;}
@@ -2360,7 +2370,10 @@ function updatePlayer(dt){const p=player;
   if(p.z>0&&p.vz<0&&(p.skating||p.airAtk)&&!p.stompHit){
     const h=HERO();
     const vit=alvos().find(t=>t.state!=="dead"&&Math.abs(t.wx-p.wx)<alc("ar",58)*kX()*0.8&&Math.abs(t.y-p.y)<=alc("arProf",24));
-    if(vit&&held.kick&&p.skating){startGrind(p,"cabeca",vit);p.anim+=dt;return;}
+    if(vit&&held.kick&&p.skating&&!(p.cabecaEsperaT>0)&&p.hp>1){ // SLIDE NA CABECA tem preco: custa vida e tem espera
+      const custo=Math.max(1,Math.round(p.maxhp*regra("slideCabecaCusto",0.08)));p.hp=Math.max(1,p.hp-custo);p.hpVolta=0;
+      p.cabecaEsperaT=regra("slideCabecaEspera",4);addDmgNum(p.wx,p.y-p.z-150,"-"+custo,false,"#ff5252");
+      startGrind(p,"cabeca",vit);p.anim+=dt;return;}
     if(vit){
       p.stompHit=true;p.airHit=true;
       // DECAIMENTO DE COMBO AEREO: cada acerto no ar vale menos que o anterior (evita combo infinito de graca)

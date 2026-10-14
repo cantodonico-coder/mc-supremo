@@ -139,3 +139,6 @@ P.alcance = {"chute":{"abacaxi":62,"nico":68},"chuteProf":20,"ar":{"abacaxi":58,
 // P.musicaCalma: a trilha só toca durante a briga; fora dela fica o ambiente (volume do ambiente na briga = ambienteNaBriga).
 P.ambiente = {"JAY": ["industria", "gente"], "O SKATER": ["cidade", "gente"], "OLD T": ["passaros", "corvos", "gente"], "MÃO DE PEDRA": ["cidade", "gente"], "WALESKA": ["cidade", "gente"], "MAZAROPE": ["mar", "passaros"], "SUPER BOSS": ["mar", "passaros", "gente"]};
 P.musicaCalma = {"ativa":1,"entra":1.2,"sai":2.5,"ambienteNaBriga":0.45,"respiracao":1};
+
+// Slide na cabeça do vilão: custa slideCabecaCusto da vida máxima (0.08 = 8%) e só pode de novo depois de slideCabecaEspera segundos.
+P.regras = Object.assign(P.regras,{"slideCabecaCusto":0.08,"slideCabecaEspera":4});
