@@ -1380,6 +1380,8 @@ function bateNoCarro(p,reach){
     if(Math.abs(pr.wx-p.wx)>reach*0.9+pr.w*0.32)continue;
     if(Math.abs(pr.y-p.y)>100)continue;
     hit=true;
+    if(!(pr._avisoT>performance.now())){pr._avisoT=performance.now()+900;addDmgNum(pr.wx,pr.y-170,"SÓ COM MANOBRA!",false,"#ffd27a");}
+    impactBurst(p.wx,p.y-70,"#ffd27a",false);if(!AU.som("soco",0.6))AU.punch();continue; // o Uno so quebra com manobra em cima dele
     pr.hp=(pr.hp!=null?pr.hp:9)-1;
     const mx=pr.maxhp||9,crit=pr.hp<=mx/3;
     if(bonus&&pr===bonus.car){comboHit();bonus.pts+=CFG.UNO.ptsHit;addDmgNum(pr.wx+(Math.random()-.5)*80,pr.y-200,"+"+CFG.UNO.ptsHit,false,"#ffe36a");}
@@ -1840,13 +1842,17 @@ function endGrind(p,ollie){const m=p.grindMode;AU.somLoop("slideMetal",false);AU
 // NOVA (repetir a mesma seguida nao conta); cada uma soma 1 hit no contador de
 // combo e da mais tempo no meio-fio. As 4 no mesmo slide = COMBO DE MANOBRAS.
 // =====================================================================
+// 5 manobras (manche no slide): ↓ CROOKED GRIND · ↑ ROCK SLIDE · ← TAIL SLIDE · ↖/↙ (tras na diagonal) FRONT TAIL SLIDE · → FRONT NOSE SLIDE
 const MANOBRAS={
-  cima:  {nome:"OLLIE NO TRILHO!",cor:"#5aa9ff",quadro:"slideCima"},
-  baixo: {nome:"CROOKED!",        cor:"#ff8c00",quadro:"slideBaixo"},
-  frente:{nome:"NOSEGRIND!",      cor:"#2ec27e",quadro:"slideFrente"},
-  tras:  {nome:"TAILSLIDE!",      cor:"#ff5a9a",quadro:"slideTras"}};
+  cima:  {nome:"ROCK SLIDE!",      curto:"ROCK SLIDE",  seta:"↑",cor:"#5aa9ff",quadro:"slideCima"},
+  baixo: {nome:"CROOKED GRIND!",   curto:"CROOKED",     seta:"↓",cor:"#ff8c00",quadro:"slideBaixo"},
+  frente:{nome:"FRONT NOSE SLIDE!",curto:"FRONT NOSE",  seta:"→",cor:"#2ec27e",quadro:"slideFrente"},
+  tras:  {nome:"TAIL SLIDE!",      curto:"TAIL SLIDE",  seta:"←",cor:"#ff5a9a",quadro:"slideTras"},
+  tras2: {nome:"FRONT TAIL SLIDE!",curto:"FRONT TAIL",  seta:"↖",cor:"#c77dff",quadro:"slideTras"}};
+const N_MANOBRAS=Object.keys(MANOBRAS).length;
 function direcaoManobra(p){
   const ax=keys.ax||((keys.right?1:0)-(keys.left?1:0)),ay=keys.ay||((keys.down?1:0)-(keys.up?1:0)),lim=0.5;
+  {const fx=ax*p.grindDir;if(fx<-0.35&&Math.abs(ay)>0.35)return "tras2";}   // pra tras NA DIAGONAL = front tail slide
   if(Math.abs(ay)>=Math.abs(ax)){if(ay<-lim)return "cima";if(ay>lim)return "baixo";return null;}
   const fx=ax*p.grindDir;if(fx>lim)return "frente";if(fx<-lim)return "tras";return null;}
 function atualizaManobra(p,dt){
@@ -1864,9 +1870,19 @@ function atualizaManobra(p,dt){
   if(dir==="cima")p.hopT=0.32;
   if(p.grindMode==="cabeca"&&p.grindTgt&&p.grindTgt.state!=="dead")      // na cabeca do vilao: manobra tambem bate
     damageEnemy(Math.max(1,Math.round(HERO().dmgAr*0.5)),1,0.45,null,p.grindTgt);
-  if(Object.keys(p.manobraSet).length===4&&!p.manobraBonus){p.manobraBonus=true;score+=CFG.MANOBRA_BONUS4;
+  if(p.grindMode==="prop"&&p.grindTgt&&p.grindTgt.type==="uno")manobraNoUno(p,p.grindTgt,dir,M);
+  if(Object.keys(p.manobraSet).length===N_MANOBRAS&&!p.manobraBonus){p.manobraBonus=true;score+=CFG.MANOBRA_BONUS4;
     addDmgNum(p.wx,p.y-p.z-215,"COMBO DE MANOBRAS! +"+CFG.MANOBRA_BONUS4,true,"#ffcf33");shake=Math.max(shake,8);vib([20,30,20]);}
 }
+// UNO SO QUEBRA NA MANOBRA: cada manobra DIFERENTE em cima do carro arranca 1/5 dele. As 5 = explode.
+function manobraNoUno(p,car,dir,M){car.manobras=car.manobras||{};
+  if(car.manobras[dir]){addDmgNum(car.wx,car.y-235,"JÁ FEZ ESSA!",false,"#bbb");return;}
+  car.manobras[dir]=1;const feitas=Object.keys(car.manobras).length,mx=car.maxhp||9;
+  car.hp=Math.max(0,Math.round(mx*(1-feitas/N_MANOBRAS)));car.dmg=car.hp<=mx/3?2:(car.hp<=mx*2/3?1:0);
+  if(bonus&&car===bonus.car){bonus.pts+=CFG.UNO.ptsHit*5;addDmgNum(car.wx,car.y-260,feitas+"/"+N_MANOBRAS,true,"#ffcf33");}
+  shake=Math.max(shake,10);impactBurst(p.wx,p.y-p.z-20,M.cor,true);AU.som("quebra",0.9);vib(25);
+  for(let i=0;i<14;i++)sparks.push({wx:p.wx,y:p.y-p.z,vx:(Math.random()-.5)*480,vy:-120-Math.random()*260,t:0.6,c:["#ff8c00","#ffcf33","#bbb"][i%3]});
+  if(car.hp<=0){endGrind(p,true);unoExplode(car);}}
 function pulinhoManobra(p){return p.hopT>0?Math.sin(Math.PI*(1-p.hopT/0.32))*28:0;}
 function updateGrind(p,dt){
   if(press.jump){press.jump=false;press.jumpTaps.length=0;endGrind(p,true);return;}
@@ -3092,6 +3108,13 @@ function posePalito(a){
       P0.lean=mix(0,-20,ext)-6*joelho;P0.hip=0.45+0.02*joelho;
       P0.fF=[mix(0.07,0.34,ext)+0.06*joelho,mix(0,-0.25,ext)-0.2*joelho];P0.fB=[mix(-0.07,-0.1,ext),0];
       P0.aF=[mix(30,-20,ext),mix(70,50,ext)];P0.aB=[mix(20,110,ext),mix(60,20,ext)];P0.trilha="pe";P0.forca=ext;return P0;}
+    if(p.grindMode&&p.manobra){const m=p.manobra;P0.hip=0.33;
+      if(m==="baixo"){P0.hip=0.27;P0.lean=22;P0.aF=[95,10];P0.aB=[-60,20];}
+      else if(m==="cima"){P0.hip=0.36;P0.lean=-8;P0.aF=[150,20];P0.aB=[130,30];P0.fF=[0.12,-0.04];}
+      else if(m==="frente"){P0.lean=26;P0.aF=[110,0];P0.aB=[-90,0];P0.fF=[0.16,0];P0.fB=[-0.04,0];}
+      else if(m==="tras"){P0.lean=-18;P0.aF=[60,40];P0.aB=[-110,0];P0.fF=[0.04,0];P0.fB=[-0.16,0];}
+      else{P0.lean=-10;P0.head=14;P0.aF=[-70,30];P0.aB=[120,20];P0.fF=[0.02,-0.03];P0.fB=[-0.17,0];}
+      return P0;}
     if(p.grindMode){P0.hip=0.33;P0.aF=[80,10];P0.aB=[-80,-10];P0.lean=8;return P0;}
     if(p.z>0){
       if(p.airAtk){P0.lean=-12;P0.fF=[0.36,-0.12];P0.fB=[-0.06,-0.14];P0.aF=[60,40];P0.aB=[-60,30];return P0;}
@@ -3586,7 +3609,7 @@ function startUnoBonus(ph,faseVencida){
   Object.assign(p,{wx:bonus.minX+10,z:0,vz:0,mvx:0,mvy:0,kbx:0,atkT:0,kickT:0,throwT:0,throwTgt:null,hurtT:0,
     presoT:0,paralyzedT:0,airAtk:false,skating:false,escaping:false,grinding:false,jumpsUsed:0,comboStep:0,
     state:"idle",facing:1,__onProp:null,__climbing:null});
-  scene="bonus";fadeT=0.35;avisoHUD("BÔNUS: DETONA O UNO!");AU.power();
+  scene="bonus";fadeT=0.35;avisoHUD("BÔNUS: MANOBRAS EM CIMA DO UNO!");AU.power();car.manobras={};
 }
 function updateBonus(dt){
   if(bonus.endT>0){bonus.endT-=dt;player.anim+=dt;if(bonus.endT<=0)endUnoBonus();return;}
@@ -3619,7 +3642,10 @@ function drawBonus(dt){drawPhaseBg();
   bar(W-40,24,360,16,Math.max(0,bonus.car.hp/bonus.car.maxhp),"#ff8c00","#ffcf33","r");
   cx.textAlign="right";cx.fillStyle="#ffd27a";cx.font='10px "Press Start 2P",monospace';cx.fillText("UNO",W-40,62);
   cx.restore();
-  cx.textAlign="left";drawComboHUD(110);drawTutorial();cx.restore();}
+  {const feitas=bonus.car.manobras||{},ks=Object.keys(MANOBRAS);cx.textAlign="left";cx.font='10px "Press Start 2P",monospace';
+   cx.fillStyle="rgba(6,4,10,.62)";cx.fillRect(18,100,300,22+ks.length*20);cx.fillStyle="#ffcf33";cx.fillText("SLIDE NO UNO + MANCHE:",28,118);
+   ks.forEach((k,i)=>{const M=MANOBRAS[k],ok=feitas[k];cx.fillStyle=ok?"#2ec27e":M.cor;cx.fillText((ok?"✔ ":M.seta+" ")+M.curto,28,140+i*20);});}
+  cx.textAlign="left";drawComboHUD(110+40+Object.keys(MANOBRAS).length*20);drawTutorial();cx.restore();}
 // barra de energia do chefe invasor, logo abaixo da do vilao da fase
 function drawInvaderHUD(){
   if(!invader||invader.state==="saindo")return;

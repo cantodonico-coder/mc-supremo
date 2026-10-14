@@ -292,3 +292,19 @@ O jogo tem manifesto (`manifest.webmanifest`) e ícones em `assets/ui/icone-*.pn
 - `plataformas` da fase (em `js/dados.js`): objetos que já estão desenhados no cenário ganham colisão, altura para subir e slide. `x`/`w` em px do cenário, `y` = linha do pé, `prof` = profundidade que ocupam.
   - **Toca-discos:** bloco na faixa de trás. Para passar por ali, pule em cima (ou dê a volta pela frente). Dá slide em cima.
   - **Microfone deitado:** **rampa** (`perfil` = lista de [x, altura]). Mais alto no bojo, baixando até a ponta. Pule no bojo com a voadora segurando 🦵 e desce deslizando pelo microfone inteiro; dá para subir também na parte baixa.
+
+## Uno só quebra com manobra (out/2026)
+
+- Soco e chute no Uno não amassam mais (aparece "SÓ COM MANOBRA!").
+- Dê slide em cima do carro (pule, 🦵 no ar e segure 🦵 até pousar no teto) e aponte o manche. Cada manobra **diferente** arranca 1/5 do Uno. As 5 = UNO DETONADO:
+
+| Manche no slide | Manobra |
+|---|---|
+| ↓ | CROOKED GRIND |
+| ↑ | ROCK SLIDE |
+| ← (para trás) | TAIL SLIDE |
+| ↖ ou ↙ (para trás na diagonal) | FRONT TAIL SLIDE |
+| → (para frente) | FRONT NOSE SLIDE |
+
+- Repetir a mesma não conta ("JÁ FEZ ESSA!"). No bônus aparece a lista das 5 com ✔ nas feitas.
+- As mesmas 5 manobras valem em qualquer slide (meio-fio, banco, esteira, microfone). Fazer as 5 no mesmo slide = COMBO DE MANOBRAS.
