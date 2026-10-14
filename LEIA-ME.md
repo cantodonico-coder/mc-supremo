@@ -274,3 +274,14 @@ O jogo tem manifesto (`manifest.webmanifest`) e ícones em `assets/ui/icone-*.pn
 ## Slide na cabeça do vilão tem preço (out/2026)
 
 - Cada slide na cabeça custa **8% da vida máxima** (não mata: para em 1) e só pode de novo depois de **4 s**. Ajuste em `slideCabecaCusto` e `slideCabecaEspera` (fim de `js/dados.js`).
+
+## Golpes mais claros, palito fluido, agarrão fácil e vilão com arma (out/2026)
+
+- **Palito fluido:** a pose muda por mola (sem pular de uma posição para outra). O soco tem 3 tempos: puxa, estala e volta para a guarda. O chute recolhe o joelho, estica e recolhe. O gancho (3º soco) sobe de baixo.
+- **Golpe legível:** rastro na mão ou no pé durante o golpe (claro no herói, vermelho no vilão). Vilão preparando golpe mostra **"!"** piscando em cima da cabeça: amarelo = dá para defender, vermelho = agarrão.
+- **Resposta imediata:**
+  - Soco mais curto (`socoT` 0.26 s) e chute (`chuteT` 0.30 s).
+  - Apertar 👊 ou 🦵 no meio de um golpe guarda o comando e ele sai assim que der. Se o soco acertou, o próximo corta a recuperação.
+- **Agarrão fácil (padrão SoR):** andar contra o vilão colado agarra sozinho (`agarraAndando` 0.16 s). 👊 colado também agarra, mas só bem encostado (`agarraSocoX`), para não atrapalhar o combo.
+- **Vilão pega arma do chão** (garrafa, shape, tábua; o copo não): vai buscar quando a arma está na tela, bate mais forte e mais longe, gasta os usos e **solta a arma** quando é derrubado, agarrado ou nocauteado. Ajustes: `vilaoPegaArma` (chance), `vilaoArmaDano`, `vilaoArmaBusca` (distância).
+- Correção: no modo com arte (sem palito), a arma na mão do herói não aparecia por um erro no código.
