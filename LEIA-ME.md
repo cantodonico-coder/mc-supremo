@@ -346,3 +346,10 @@ Cada capanga ganhou um golpe próprio, além do estilo de luta que já tinha (ta
 - **Recortado:** a arte do Cabeça de Abacaxi (pose_04) foi cortada em 11 partes (`assets/herois/abacaxi/rig/`: tronco, cabeça, braços, antebraços, coxas, canelas e shape) e montada em cima do esqueleto do palito. Todos os movimentos do palito (soco, chute, gancho, pulo, slide, manobras, giro, blitz, agarrão) valem para ele.
 - As partes ficam em `P.recorte` no fim de `js/dados.js` (posição na imagem original e o osso de cada uma). Para recortar outra arte (ex.: o Nico), é o mesmo formato com o nome do herói. Os vilões continuam em palito nesse modo.
 - Ajuste: no recortado, o braço e a perna de trás ficam mais abertos (`recorteAbreBraco`, `recorteAbrePerna`) e um pouco mais escuros, para não sumirem atrás do tronco. O rastro do chute segue o pé.
+
+## Boneco novo do Cabeça de Abacaxi (out/2026)
+
+- Na pausa, o 3º modo do boneco agora é **⭐ NOVO** (o recortado saiu).
+- Os quadros vêm do boneco base **"Base for fighting or beat'em up"** (itch.io, CapitanRasputin; arte original **KeyZip**; licença **CC BY 3.0**: pode usar em jogo comercial, com crédito, já nos créditos do jogo). O manequim foi "vestido" por código como o Abacaxi: moletom preto com BOOM RAP e corrente, calça, tênis, mãos e a cabeça com dreads da arte original.
+- 18 animações em `assets/herois/abacaxi/base/` (parado, andar, recuar, correr, socos, combo, soco agachado, soco no ar, chute, voadora, pulo, dor, queda, levantar, agachar, rasteira, arremesso). Ligadas aos golpes em `P.mcBase` (fim de `js/dados.js`). O shape é desenhado debaixo do pé.
+- Script que veste o manequim: guardado fora do jogo (pode ser refeito para o Nico e para vilões a partir do mesmo boneco base).

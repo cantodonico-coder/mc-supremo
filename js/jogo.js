@@ -57,6 +57,7 @@ function fset(fr,t){return fr?[{img:mkAny(fr.src,t),w:fr.w,h:fr.h,flash:null}]:n
 function fsetArr(a,t){return a.map(fr=>({img:mkAny(fr.src,t),w:fr.w,h:fr.h,flash:null}));}
 const IMG={mcPort:mkImg(P.mcPort),museuBg:mkImg(P.museuBg),mc:{},phases:[],props:{}};
 for(const s in P.mc)IMG.mc[s]=fsetArr(P.mc[s]);
+IMG.mcBase={};if(P.mcBase)for(const s in P.mcBase)IMG.mcBase[s]=fsetArr(P.mcBase[s]);
 IMG.nico={};for(const s in NICO)if(s!=="__port")IMG.nico[s]=fsetArr(NICO[s]);
 IMG.nicoPort=mkImg(NICO.__port);
 IMG.abacaxiParty=mkImgLazy("assets/extras/abacaxiparty_1.jpg");
@@ -157,7 +158,7 @@ const HEROES={
 const HERO_KEYS=["abacaxi","nico"];
 let heroKey="abacaxi";
 function HERO(){return HEROES[heroKey];}
-function HIMG(){return HERO().set();}
+function HIMG(){if(heroKey==="abacaxi"&&typeof modoBoneco==="function"&&modoBoneco()===2&&IMG.mcBase&&IMG.mcBase.idle)return IMG.mcBase;return HERO().set();}
 // ajustes do Admin salvos em js/dados.js
 if(typeof HEROES_AJUSTE!=="undefined")for(const k in HEROES_AJUSTE)if(HEROES[k])Object.assign(HEROES[k],HEROES_AJUSTE[k]);
 function flashOf(fr){if(fr.flash)return fr.flash;if(!fr.img.ok)return null;
@@ -978,7 +979,7 @@ function despausar(){
 (function(){
   const pb=document.getElementById('pauseBtn'),pv=document.getElementById('pVolta'),ps=document.getElementById('pSai');
   try{if(pv&&!document.getElementById('pPalito')){const bp=document.createElement('button');bp.id='pPalito';
-    const rot=()=>{bp.textContent=["🖼 BONECO: ARTE","🦴 BONECO: PALITO","✂ BONECO: RECORTADO"][modoBoneco()];};rot();
+    const rot=()=>{bp.textContent=["🖼 BONECO: ARTE","🦴 BONECO: PALITO","⭐ BONECO: NOVO"][modoBoneco()];};rot();
     const tg=e=>{e.preventDefault();e.stopPropagation();setPalito((modoBoneco()+1)%3);rot();};
     bp.addEventListener('click',tg);bp.addEventListener('touchend',tg,{passive:false});pv.parentNode.insertBefore(bp,ps);
     const bc=document.createElement('button');bc.id='pCtrl';bc.textContent="⚙ AJUSTAR CONTROLES";
@@ -3006,6 +3007,7 @@ function mcFrame(){const p=player,S=HIMG(),F=CFG.FPS||{};
   if(p.throwT>0){const f=S.throw;if(!has(f))return skIdx();                                    // arremesso
     const sub=p.throwDir==="frente"?[f[Math.min(1,f.length-1)],f[f.length-1]]:f.slice(Math.min(2,f.length-1));
     return seqFrame(sub,1-p.throwT/CFG.THROW_T);}
+  if(p.downT>0&&has(S.queda)){const t=CFG.QUEDA_CHAO-p.downT;if(t<0.25)return seqFrame(S.queda.slice(0,3),t/0.25);if(p.downT<0.35&&has(S.levantar))return seqFrame(S.levantar,1-p.downT/0.35);return S.queda[3];}
   if(p.downT>0&&has(S.dano))return S.dano[S.dano.length-1];                                  // no chao
   if(p.grindMode){const q=p.manobra&&MANOBRAS[p.manobra]?S[MANOBRAS[p.manobra].quadro]:null;   // pose da manobra
     if(has(q))return cyc(q,p.skAnim*(F.slide||12));
@@ -3137,8 +3139,9 @@ var _palito=null; // lido na primeira consulta (o botao da pausa e criado antes 
 function modoBoneco(){if(_palito===null){_palito=0;
   try{const q=new URLSearchParams(location.search).get("palito");if(q==="1"||q==="0"||q==="2")localStorage.setItem("mcs_palito",q);_palito=+(localStorage.getItem("mcs_palito")||0)||0;}catch(e){}}
   return _palito;}
-function palitoAtivo(){return modoBoneco()>0;}
-function recorteAtivo(){return modoBoneco()===2;}
+function palitoAtivo(){return modoBoneco()===1;}
+function recorteAtivo(){return false;} // o recortado saiu: o modo 2 agora e o BONECO NOVO
+function baseAtivo(){return modoBoneco()===2&&heroKey==="abacaxi";}
 function setPalito(v){_palito=(v===true)?1:(+v||0);try{localStorage.setItem("mcs_palito",String(_palito));}catch(e){}}
 // ---------- BONECO RECORTADO ----------
 const _rigImgs={};
@@ -3376,6 +3379,10 @@ function drawActor(a,fr,z,dead){if(!fr||!fr.img)return;
   else if((a.getupT>0||(a===player&&a.isInvincible&&!a.escaping))&&(performance.now()%140)<70)cx.globalAlpha=0.45;
   if(a.facing<0){cx.translate(sx,0);cx.scale(-1,1);cx.translate(-sx,0);}
   if(dead)cx.globalAlpha=Math.max(0.15,a.deadT/1.4);
+  if(a===player&&baseAtivo()&&!deitado&&!(a.downT>0)&&!(a.espT>0)){const H=dh,w=H*0.40,y=a.y-z; // shape debaixo do pe
+    cx.save();cx.fillStyle="#3a2a1e";cx.strokeStyle="#0b0b10";cx.lineWidth=3;cx.beginPath();
+    if(cx.roundRect)cx.roundRect(sx-w/2,y-H*0.03,w,H*0.026,H*0.013);else cx.rect(sx-w/2,y-H*0.03,w,H*0.026);cx.fill();cx.stroke();
+    cx.fillStyle="#e8e2d0";for(const k of[-0.32,0.32]){cx.beginPath();cx.arc(sx+w*k,y-H*0.002,H*0.016,0,6.283);cx.fill();cx.stroke();}cx.restore();}
   if(palitoAtivo()){drawPalito(a,sx,a.y-z,alturaPalito(a)*sc);cx.restore();avisoGolpe(a,sx,a.y-z-alturaPalito(a)*sc*1.05);return;}
   if(fr.img.ok){try{cx.drawImage(fr.img,dx,dy,dw,dh);}catch(e){}}else{cx.fillStyle="#c0392b";cx.fillRect(dx,dy,dw,dh);}
   if(a.flashT>0){const fl=flashOf(fr);if(fl){cx.globalAlpha=Math.min(1,a.flashT/0.14);cx.drawImage(fl,dx,dy,dw,dh);}}
@@ -4146,7 +4153,9 @@ function drawCredits(dt){
   linhas.push({t:"TURNE UNDERGROUND",f:11,c:"#8a7a5a",pad:26});
   linhas.push({t:"PORTO ALEGRE \\u00b7 RS",f:11,c:"#8a7a5a",pad:60});
   linhas.push({t:"UM JOGO DE",f:9,c:"#6d6357",pad:26});
-  linhas.push({t:"NICOSHEIK LABS",f:13,c:"#c9b98f",pad:80});
+  linhas.push({t:"NICOSHEIK LABS",f:13,c:"#c9b98f",pad:50});
+  for(const c of (P.creditosArte||[]))linhas.push({t:c.toUpperCase(),f:7,c:"#6d6357",pad:22});
+  linhas.push({t:"",f:7,pad:40});
   let y=H-credScroll+40;
   cx.save();
   for(const ln of linhas){
