@@ -3161,18 +3161,20 @@ function drawRecorte(rg,a,po,sx,gy,H,branco){const R=rg.R,r=Math.PI/180;
   const braco=(ang,cima,baixo)=>{const omb=T(R[cima].a[0],R[cima].a[1]);const k=_arm(omb[0],omb[1],ang[0]+po.lean,ang[1],LA);
     const j=rigParte(rg,cima,omb[0],omb[1],Math.atan2(k[1]-omb[1],k[0]-omb[0]),s);
     const fim=rigParte(rg,baixo,j[0],j[1],Math.atan2(k[3]-k[1],k[2]-k[0]),s);return [omb[0],omb[1],fim[0],fim[1]];};
+  const aB=[po.aB[0]-regra("recorteAbreBraco",62),po.aB[1]*0.45],fB=[po.fB[0]-regra("recorteAbrePerna",0.07),po.fB[1]],fF=[po.fF[0]+0.03,po.fF[1]];
+  const tras=(fn)=>{if(!branco&&"filter" in cx){cx.save();cx.filter="brightness(0.72)";fn();cx.restore();}else fn();}; // membros de tras mais escuros: le a profundidade
   cx.save();if(branco&&"filter" in cx)cx.filter="brightness(3)";
   if(!po.giro){const sh=R.shape,len=Math.hypot(sh.b[0]-sh.a[0],sh.b[1]-sh.a[1])*s;rigParte(rg,"shape",sx-len/2,gy-H*0.005,0,s);}
-  braco(po.aB,"bracoTrasCima","bracoTrasBaixo");
-  perna(po.fB,"coxaTras","canelaTras");
+  tras(()=>braco(aB,"bracoTrasCima","bracoTrasBaixo"));
+  tras(()=>perna(fB,"coxaTras","canelaTras"));
   {const ang=Math.atan2(tB[1]-tA[1],tB[0]-tA[0])+rot;rigParte(rg,"tronco",hx,hy,ang,s);}
-  perna(po.fF,"coxaFrente","canelaFrente");
+  const peF=perna(fF,"coxaFrente","canelaFrente");
   {const pc=R.cabeca,nk=T(pc.a[0],pc.a[1]),ai=Math.atan2(pc.b[1]-pc.a[1],pc.b[0]-pc.a[0]);rigParte(rg,"cabeca",nk[0],nk[1],ai+rot+po.head*r,s);}
   let mf;
   if(po.giro){const prog=1-Math.max(0,a.espT)/0.5,th=prog*Math.PI*3,fz=a.facing||1;mf=braco([90+Math.cos(th)*60*fz,0],"bracoFrenteCima","bracoFrenteBaixo");
     const sh=R.shape,len=Math.hypot(sh.b[0]-sh.a[0],sh.b[1]-sh.a[1])*s;rigParte(rg,"shape",mf[2]-len/2*Math.abs(Math.cos(th)),mf[3],0,s*Math.max(0.2,Math.abs(Math.cos(th))));}
   else mf=braco(po.aF,"bracoFrenteCima","bracoFrenteBaixo");
-  cx.restore();return mf;}
+  cx.restore();mf.pe=[peF[2],peF[3]];return mf;}
 
 const PAL_TIPO={laranja:{c:"#ff8c1a",ch:"bone",ac:"#222"},regata:{c:"#f06a1a",ch:"bone",ac:"#2a4fd6"},faca:{c:"#e8742a",ch:"bandana",ac:"#f2c230",faca:1},colete:{c:"#3f7a3a",ch:"bone",ac:"#222"}};
 function corPalito(a){
@@ -3302,8 +3304,8 @@ function drawPalito(a,sx,base,H){
   const escuro=branco?"#ffffff":"#2a2730";
   const rg=recorteAtivo()?rigDoHeroi(a):null;
   if(rg){let mfR=drawRecorte(rg,a,po,sx,gy,H,branco);
-    {const tr=a._tr||(a._tr=[]),ag=performance.now();if(poAlvo.trilha&&!branco)tr.push([mfR[2],mfR[3],ag]);while(tr.length&&ag-tr[0][2]>110)tr.shift();
-     if(tr.length>1){cx.save();for(let i=1;i<tr.length;i++){const al=1-(ag-tr[i][2])/110;cx.globalAlpha=Math.max(0,al)*0.8;cx.strokeStyle="#fff6d0";cx.lineWidth=lw*(0.6+1.4*al);
+    {const tr=a._tr||(a._tr=[]),ag=performance.now();if(poAlvo.trilha&&!branco){const pt=poAlvo.trilha==="pe"?mfR.pe:[mfR[2],mfR[3]];tr.push([pt[0],pt[1],ag]);}while(tr.length&&ag-tr[0][2]>110)tr.shift();
+     if(tr.length>2){cx.save();for(let i=1;i<tr.length;i++){const al=1-(ag-tr[i][2])/110;cx.globalAlpha=Math.max(0,al)*0.7;cx.strokeStyle="#fff6d0";cx.lineWidth=lw*(0.4+0.9*al);
        cx.beginPath();cx.moveTo(tr[i-1][0],tr[i-1][1]);cx.lineTo(tr[i][0],tr[i][1]);cx.stroke();}cx.restore();}}
     if(a.arma&&!po.giro&&P.armas&&P.armas[a.arma.k]){const ang=Math.atan2(mfR[3]-mfR[1],mfR[2]-mfR[0]);desenhaArmaSprite(a.arma.k,mfR[2],mfR[3],escalaArma(a.y),ang,false);}
     cx.restore();return;}
