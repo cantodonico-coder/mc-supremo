@@ -978,8 +978,8 @@ function despausar(){
 (function(){
   const pb=document.getElementById('pauseBtn'),pv=document.getElementById('pVolta'),ps=document.getElementById('pSai');
   try{if(pv&&!document.getElementById('pPalito')){const bp=document.createElement('button');bp.id='pPalito';
-    const rot=()=>{bp.textContent=palitoAtivo()?"🦴 MODO PALITO: LIGADO":"🦴 MODO PALITO: DESLIGADO";};rot();
-    const tg=e=>{e.preventDefault();e.stopPropagation();setPalito(!palitoAtivo());rot();};
+    const rot=()=>{bp.textContent=["🖼 BONECO: ARTE","🦴 BONECO: PALITO","✂ BONECO: RECORTADO"][modoBoneco()];};rot();
+    const tg=e=>{e.preventDefault();e.stopPropagation();setPalito((modoBoneco()+1)%3);rot();};
     bp.addEventListener('click',tg);bp.addEventListener('touchend',tg,{passive:false});pv.parentNode.insertBefore(bp,ps);
     const bc=document.createElement('button');bc.id='pCtrl';bc.textContent="⚙ AJUSTAR CONTROLES";
     const tc=e=>{e.preventDefault();e.stopPropagation();window.abreAjusteControles&&window.abreAjusteControles();};
@@ -3133,10 +3133,47 @@ function kZ(){return (CFG.ESCALA_ALTURA||1.6)*fatorObjetos();}
 // Mesmo tamanho e mesmas areas de acerto dos bonecos com arte.
 // =====================================================================
 var _palito=null; // lido na primeira consulta (o botao da pausa e criado antes deste trecho rodar)
-function palitoAtivo(){if(_palito===null){_palito=false;
-  try{const q=new URLSearchParams(location.search).get("palito");if(q==="1"||q==="0")localStorage.setItem("mcs_palito",q);_palito=localStorage.getItem("mcs_palito")==="1";}catch(e){}}
+// modo do boneco: 0 = arte (quadros), 1 = palito, 2 = RECORTADO (partes da arte montadas no esqueleto do palito)
+function modoBoneco(){if(_palito===null){_palito=0;
+  try{const q=new URLSearchParams(location.search).get("palito");if(q==="1"||q==="0"||q==="2")localStorage.setItem("mcs_palito",q);_palito=+(localStorage.getItem("mcs_palito")||0)||0;}catch(e){}}
   return _palito;}
-function setPalito(v){_palito=!!v;try{localStorage.setItem("mcs_palito",v?"1":"0");}catch(e){}}
+function palitoAtivo(){return modoBoneco()>0;}
+function recorteAtivo(){return modoBoneco()===2;}
+function setPalito(v){_palito=(v===true)?1:(+v||0);try{localStorage.setItem("mcs_palito",String(_palito));}catch(e){}}
+// ---------- BONECO RECORTADO ----------
+const _rigImgs={};
+function rigDoHeroi(a){if(a!==player||!P.recorte)return null;const R=P.recorte[heroKey];if(!R)return null;
+  if(!_rigImgs[heroKey]){_rigImgs[heroKey]={};for(const k in R)_rigImgs[heroKey][k]=mkImg(R[k].src);}
+  const I=_rigImgs[heroKey];for(const k in R)if(!I[k].ok)return null;return {R,I};}
+// desenha uma parte com a articulacao "a" no ponto (px,py), apontando o osso na direcao "ang"
+function rigParte(rg,k,px,py,ang,s){const p=rg.R[k],im=rg.I[k],ai=Math.atan2(p.b[1]-p.a[1],p.b[0]-p.a[0]);
+  cx.save();cx.translate(px,py);cx.rotate(ang-ai);cx.scale(s,s);try{cx.drawImage(im,p.x-p.a[0],p.y-p.a[1],p.w,p.h);}catch(e){}cx.restore();
+  const L=Math.hypot(p.b[0]-p.a[0],p.b[1]-p.a[1])*s;return [px+Math.cos(ang)*L,py+Math.sin(ang)*L];}
+// monta o boneco: mesmo esqueleto do palito (angulos), comprimentos da arte
+function drawRecorte(rg,a,po,sx,gy,H,branco){const R=rg.R,r=Math.PI/180;
+  const t0=R.tronco,tA=t0.a,tB=t0.b,tLen=Math.hypot(tB[0]-tA[0],tB[1]-tA[1]),s=(0.31*H)/tLen;
+  const hx=sx,hy=gy-po.hip*H,lean=po.lean*r,angT=-Math.PI/2+lean,angTi=Math.atan2(tB[1]-tA[1],tB[0]-tA[0]),rot=angT-angTi;
+  const T=(px,py)=>{const dx=(px-tA[0])*s,dy=(py-tA[1])*s;return [hx+dx*Math.cos(rot)-dy*Math.sin(rot),hy+dx*Math.sin(rot)+dy*Math.cos(rot)];};
+  const L=H*0.245,LA=H*0.165;
+  const perna=(f,cima,baixo)=>{const quadril=T(R[cima].a[0],R[cima].a[1]);const k=_ik(hx,hy,hx+f[0]*H,gy+f[1]*H,L);
+    const j=rigParte(rg,cima,quadril[0],quadril[1],Math.atan2(k[1]-hy,k[0]-hx),s);
+    const fim=rigParte(rg,baixo,j[0],j[1],Math.atan2(k[3]-k[1],k[2]-k[0]),s);return [j[0],j[1],fim[0],fim[1]];};
+  const braco=(ang,cima,baixo)=>{const omb=T(R[cima].a[0],R[cima].a[1]);const k=_arm(omb[0],omb[1],ang[0]+po.lean,ang[1],LA);
+    const j=rigParte(rg,cima,omb[0],omb[1],Math.atan2(k[1]-omb[1],k[0]-omb[0]),s);
+    const fim=rigParte(rg,baixo,j[0],j[1],Math.atan2(k[3]-k[1],k[2]-k[0]),s);return [omb[0],omb[1],fim[0],fim[1]];};
+  cx.save();if(branco&&"filter" in cx)cx.filter="brightness(3)";
+  if(!po.giro){const sh=R.shape,len=Math.hypot(sh.b[0]-sh.a[0],sh.b[1]-sh.a[1])*s;rigParte(rg,"shape",sx-len/2,gy-H*0.005,0,s);}
+  braco(po.aB,"bracoTrasCima","bracoTrasBaixo");
+  perna(po.fB,"coxaTras","canelaTras");
+  {const ang=Math.atan2(tB[1]-tA[1],tB[0]-tA[0])+rot;rigParte(rg,"tronco",hx,hy,ang,s);}
+  perna(po.fF,"coxaFrente","canelaFrente");
+  {const pc=R.cabeca,nk=T(pc.a[0],pc.a[1]),ai=Math.atan2(pc.b[1]-pc.a[1],pc.b[0]-pc.a[0]);rigParte(rg,"cabeca",nk[0],nk[1],ai+rot+po.head*r,s);}
+  let mf;
+  if(po.giro){const prog=1-Math.max(0,a.espT)/0.5,th=prog*Math.PI*3,fz=a.facing||1;mf=braco([90+Math.cos(th)*60*fz,0],"bracoFrenteCima","bracoFrenteBaixo");
+    const sh=R.shape,len=Math.hypot(sh.b[0]-sh.a[0],sh.b[1]-sh.a[1])*s;rigParte(rg,"shape",mf[2]-len/2*Math.abs(Math.cos(th)),mf[3],0,s*Math.max(0.2,Math.abs(Math.cos(th))));}
+  else mf=braco(po.aF,"bracoFrenteCima","bracoFrenteBaixo");
+  cx.restore();return mf;}
+
 const PAL_TIPO={laranja:{c:"#ff8c1a",ch:"bone",ac:"#222"},regata:{c:"#f06a1a",ch:"bone",ac:"#2a4fd6"},faca:{c:"#e8742a",ch:"bandana",ac:"#f2c230",faca:1},colete:{c:"#3f7a3a",ch:"bone",ac:"#222"}};
 function corPalito(a){
   if(a===player)return heroKey==="nico"?{c:"#6b707a",ch:"oculos",ac:"#2ec27e",skate:1}:{c:"#1f1f26",ch:"abacaxi",ac:"#ffcf33",skate:1};
@@ -3249,7 +3286,7 @@ function drawPalito(a,sx,base,H){
   cx.save();cx.lineCap="round";cx.lineJoin="round";
   if(po.lying){cx.translate(sx,base);cx.rotate(-Math.PI/2);cx.translate(-sx,-base+H*0.12);}
   const giro=po.giro&&a===player;
-  if(C.skate&&!giro){const w=H*0.42;cx.fillStyle=branco?"#fff":"#7a4a22";cx.strokeStyle=out;cx.lineWidth=3;
+  if(C.skate&&!giro&&!(recorteAtivo()&&a===player&&rigDoHeroi(a))){const w=H*0.42;cx.fillStyle=branco?"#fff":"#7a4a22";cx.strokeStyle=out;cx.lineWidth=3;
     cx.beginPath();cx.roundRect?cx.roundRect(sx-w/2,gy+H*0.012,w,H*0.028,H*0.014):cx.rect(sx-w/2,gy+H*0.012,w,H*0.028);cx.fill();cx.stroke();
     cx.fillStyle="#222";for(const k of[-0.3,0.3]){cx.beginPath();cx.arc(sx+w*k,base-H*0.016,H*0.018,0,6.283);cx.fill();}}
   let hx=sx,hy=gy-po.hip*H;
@@ -3263,6 +3300,13 @@ function drawPalito(a,sx,base,H){
   const braco=(ang,c)=>{const k=_arm(shx,shy+H*0.02,ang[0]+po.lean,ang[1],LA);seg([shx,shy+H*0.02,k[0],k[1],k[2],k[3]],lw*0.85,c);
     cx.fillStyle=pele;cx.strokeStyle=out;cx.lineWidth=2.5;cx.beginPath();cx.arc(k[2],k[3],lw*0.62,0,6.283);cx.fill();cx.stroke();return k;};
   const escuro=branco?"#ffffff":"#2a2730";
+  const rg=recorteAtivo()?rigDoHeroi(a):null;
+  if(rg){let mfR=drawRecorte(rg,a,po,sx,gy,H,branco);
+    {const tr=a._tr||(a._tr=[]),ag=performance.now();if(poAlvo.trilha&&!branco)tr.push([mfR[2],mfR[3],ag]);while(tr.length&&ag-tr[0][2]>110)tr.shift();
+     if(tr.length>1){cx.save();for(let i=1;i<tr.length;i++){const al=1-(ag-tr[i][2])/110;cx.globalAlpha=Math.max(0,al)*0.8;cx.strokeStyle="#fff6d0";cx.lineWidth=lw*(0.6+1.4*al);
+       cx.beginPath();cx.moveTo(tr[i-1][0],tr[i-1][1]);cx.lineTo(tr[i][0],tr[i][1]);cx.stroke();}cx.restore();}}
+    if(a.arma&&!po.giro&&P.armas&&P.armas[a.arma.k]){const ang=Math.atan2(mfR[3]-mfR[1],mfR[2]-mfR[0]);desenhaArmaSprite(a.arma.k,mfR[2],mfR[3],escalaArma(a.y),ang,false);}
+    cx.restore();return;}
   perna(po.fB,escuro);{const kb=braco(po.aB,shade(col));_maoTras=[kb[2],kb[3]];}
   seg([hx,hy,shx,shy],lw*1.45,col);perna(po.fF,escuro);
   cx.fillStyle=pele;cx.strokeStyle=out;cx.lineWidth=3;cx.beginPath();cx.arc(hcx,hcy,hr,0,6.283);cx.fill();cx.stroke();

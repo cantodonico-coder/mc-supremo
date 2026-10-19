@@ -339,3 +339,9 @@ Cada capanga ganhou um golpe próprio, além do estilo de luta que já tinha (ta
 ## Ajuste dos controles (out/2026)
 
 - Na pausa: **⚙ AJUSTAR CONTROLES**. Tamanho do manche e da bolinha, canto do manche, tamanho dos botões, **espaço entre os botões**, canto dos botões e zoom da tela. Muda ao vivo, fica salvo no aparelho (`mcs_ctrl`). **↺ VOLTAR AO PADRÃO** desfaz.
+
+## Boneco recortado (out/2026)
+
+- Na pausa, o botão do boneco agora tem 3 modos: **🖼 ARTE** (quadros), **🦴 PALITO** e **✂ RECORTADO**.
+- **Recortado:** a arte do Cabeça de Abacaxi (pose_04) foi cortada em 11 partes (`assets/herois/abacaxi/rig/`: tronco, cabeça, braços, antebraços, coxas, canelas e shape) e montada em cima do esqueleto do palito. Todos os movimentos do palito (soco, chute, gancho, pulo, slide, manobras, giro, blitz, agarrão) valem para ele.
+- As partes ficam em `P.recorte` no fim de `js/dados.js` (posição na imagem original e o osso de cada uma). Para recortar outra arte (ex.: o Nico), é o mesmo formato com o nome do herói. Os vilões continuam em palito nesse modo.
