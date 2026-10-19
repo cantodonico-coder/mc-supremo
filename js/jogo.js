@@ -3164,10 +3164,15 @@ function drawRecorte(rg,a,po,sx,gy,H,branco){const R=rg.R,r=Math.PI/180;
   const aB=[po.aB[0]-regra("recorteAbreBraco",62),po.aB[1]*0.45],fB=[po.fB[0]-regra("recorteAbrePerna",0.07),po.fB[1]],fF=[po.fF[0]+0.03,po.fF[1]];
   const tras=(fn)=>{if(!branco&&"filter" in cx){cx.save();cx.filter="brightness(0.72)";fn();cx.restore();}else fn();}; // membros de tras mais escuros: le a profundidade
   cx.save();if(branco&&"filter" in cx)cx.filter="brightness(3)";
-  if(!po.giro){const sh=R.shape,len=Math.hypot(sh.b[0]-sh.a[0],sh.b[1]-sh.a[1])*s;rigParte(rg,"shape",sx-len/2,gy-H*0.005,0,s);}
-  tras(()=>braco(aB,"bracoTrasCima","bracoTrasBaixo"));
+  if(!po.giro&&!po.caido){const sh=R.shape,len=Math.hypot(sh.b[0]-sh.a[0],sh.b[1]-sh.a[1])*s;rigParte(rg,"shape",sx-len/2,gy-H*0.005,0,s);}
+  // braco de tras: pra onde vai a mao? atras do corpo = desenha atras do tronco; na frente = por cima (senao some)
+  let bracoNaFrente=false,aBuse=aB;
+  {const omb=T(R.bracoTrasCima.a[0],R.bracoTrasCima.a[1]),kA=_arm(omb[0],omb[1],po.aB[0]+po.lean,po.aB[1],LA);
+   if(kA[2]>hx+H*0.02&&!po.caido){bracoNaFrente=true;aBuse=po.aB;}}
+  if(!bracoNaFrente)tras(()=>braco(aBuse,"bracoTrasCima","bracoTrasBaixo"));
   tras(()=>perna(fB,"coxaTras","canelaTras"));
   {const ang=Math.atan2(tB[1]-tA[1],tB[0]-tA[0])+rot;rigParte(rg,"tronco",hx,hy,ang,s);}
+  if(bracoNaFrente)tras(()=>braco(aBuse,"bracoTrasCima","bracoTrasBaixo"));
   const peF=perna(fF,"coxaFrente","canelaFrente");
   {const pc=R.cabeca,nk=T(pc.a[0],pc.a[1]),ai=Math.atan2(pc.b[1]-pc.a[1],pc.b[0]-pc.a[0]);rigParte(rg,"cabeca",nk[0],nk[1],ai+rot+po.head*r,s);}
   let mf;
@@ -3204,6 +3209,7 @@ function posePalito(a){
   if(a===player){const p=a,sk=p.skAnim||0;
     P0.hip=0.45+0.008*Math.sin(t*3);
     if(p.presoT>0||p.state==="presa"){P0.lean=-12;P0.aF=[5,10];P0.aB=[5,10];return P0;}
+    if(p.downT>0){P0.hip=0.47;P0.lean=0;P0.head=0;P0.fF=[0.04,0];P0.fB=[-0.02,0];P0.aF=[8,10];P0.aB=[-6,10];P0.caido=1;return P0;}
     if(p.hurtT>0){P0.lean=-22;P0.aF=[-40,-20];P0.aB=[-25,-30];P0.head=-12;return P0;}
     if(p.dashT>0){const k=1-p.dashT/regra("blitzT",0.34);P0.lean=30;P0.hip=0.41;P0.aF=[mix(40,95,Math.min(1,k*3)),-5];P0.aB=[mix(30,85,Math.min(1,k*3)),10];P0.fF=[0.13,0];P0.fB=[-0.12,0];P0.trilha="mao";P0.forca=1;return P0;}
     if(p.vaultT>0){P0.hip=0.40;P0.lean=10;P0.aF=[95,10];P0.aB=[90,10];P0.fF=[0.12,-0.16];P0.fB=[-0.04,-0.18];return P0;}
