@@ -349,7 +349,7 @@ Cada capanga ganhou um golpe próprio, além do estilo de luta que já tinha (ta
 
 ## Boneco novo do Cabeça de Abacaxi (out/2026)
 
-- Na pausa, o 3º modo do boneco agora é **⭐ NOVO** (o recortado saiu).
-- Os quadros vêm do boneco base **"Base for fighting or beat'em up"** (itch.io, CapitanRasputin; arte original **KeyZip**; licença **CC BY 3.0**: pode usar em jogo comercial, com crédito, já nos créditos do jogo). O manequim foi "vestido" por código como o Abacaxi: moletom preto com BOOM RAP e corrente, calça, tênis, mãos e a cabeça com dreads da arte original.
-- 18 animações em `assets/herois/abacaxi/base/` (parado, andar, recuar, correr, socos, combo, soco agachado, soco no ar, chute, voadora, pulo, dor, queda, levantar, agachar, rasteira, arremesso). Ligadas aos golpes em `P.mcBase` (fim de `js/dados.js`). O shape é desenhado debaixo do pé.
-- Script que veste o manequim: guardado fora do jogo (pode ser refeito para o Nico e para vilões a partir do mesmo boneco base).
+- Na pausa, o 3º modo do boneco é **⭐ NOVO**: poses do Abacaxi geradas com IA (Gemini/ChatGPT) a partir da arte original, usando o boneco base de CapitanRasputin/KeyZip (CC BY 3.0) só como molde de pose.
+- Como gerar mais poses sem a IA mudar o personagem: `para-ia/PROMPTS.txt` (uma conversa nova por pose, sempre as mesmas 2 imagens e o texto fixo inteiro).
+- Quadros prontos em `assets/herois/abacaxi/ia/` (fundo tirado, tamanho igualado pelo BOOM RAP, pé no chão). Ligados aos golpes em `P.mcBase` (fim de `js/dados.js`). O shape é desenhado debaixo do pé pelo jogo, então as poses não precisam ter skate.
+- Faltam poses próprias para: apanhando, agarrão/joelhada, arremesso, levantar, voadora e slide (hoje usam a pose mais parecida).
