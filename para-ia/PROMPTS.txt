@@ -1,0 +1,56 @@
+MC SUPREMO - POSES DO CABECA DE ABACAXI COM IA (Gemini ou ChatGPT)
+=====================================================================
+
+REGRAS PARA A IA NAO MUDAR O BONECO (siga sempre):
+1. UMA conversa NOVA para cada pose. Nunca peca a pose seguinte na mesma conversa
+   (e a conversa longa que faz a IA ir mudando o personagem).
+2. Em toda conversa anexe SEMPRE as 2 imagens, nesta ordem:
+   - 1a: 00-REFERENCIA-personagem.png  (quem ele e)
+   - 2a: o arquivo da pose (ex.: 01-parado-1.png)  (so a posicao do corpo)
+3. Cole o PROMPT FIXO inteiro + a linha da pose. Nao resuma, nao traduza.
+4. Se vier errado (cabelo loiro, sem oculos, outra cor, outro angulo): NAO peca correcao
+   na mesma conversa. Abra conversa nova e gere de novo.
+5. Salve com o MESMO nome da pose (ex.: 01-parado-1.png) e coloque na pasta para-ia\prontas\
+   (ou anexe aqui).
+
+---------------------------------------------------------------------
+PROMPT FIXO (copiar e colar inteiro, sempre igual)
+---------------------------------------------------------------------
+Create ONE single game sprite of the character shown in the FIRST image, posed EXACTLY like the mannequin in the SECOND image.
+
+THE SECOND IMAGE IS ONLY A POSE GUIDE: copy only the body position, angles of arms, legs, torso and head. Do NOT copy its body, skin, muscles or nudity.
+
+CHARACTER (must be identical in every image, do not change anything):
+- Name: "Cabeca de Abacaxi", Brazilian rapper and skater, adult Black man around 40 years old, medium-dark brown skin.
+- Hair: long DARK BROWN dreadlocks (not blond, not yellow), gathered up and back in a high half-ponytail tied with ONE gold ring on top, dreads falling to the back of the head and shoulders, small gold beads on some dread tips. Short shaved sides.
+- Face: black rectangular eyeglasses with thin black frames, short salt-and-pepper (grey) beard and mustache, small gold earring, confident friendly face.
+- Clothes: plain BLACK hoodie (hood down) with the words "BOOM RAP" in big yellow-gold blocky letters on the chest (BOOM on top line, RAP below), kangaroo pocket; THICK GOLD Cuban link chain necklace over the hoodie; BLACK cargo jogger pants with side cargo pockets.
+- Shoes: BLACK OUS skate shoes (Brazilian skateboarding brand): chunky padded skate sneakers, all-black suede upper, black laces, thick puffy tongue, WHITE rubber cupsole. Same shoes in every image.
+- Body: average athletic build, normal proportions (not muscular bodybuilder, not chibi).
+
+VIEW AND STYLE:
+- Side view (profile / slight 3/4), character FACING RIGHT, full body from top of the dreads to the soles, nothing cropped.
+- Same art style as the FIRST image: clean cartoon game art, bold dark outline, cel shading, crisp details, like a modern Streets of Rage 4 sprite.
+- No skateboard, no weapon, no props, no shadow on the floor, no text other than BOOM RAP on the hoodie.
+- Background: flat solid pure white (#FFFFFF), nothing else.
+- Square image, character centered, about 85% of the image height.
+
+POSE:
+---------------------------------------------------------------------
+LINHA DA POSE (cole no final, depois de "POSE:")
+---------------------------------------------------------------------
+01-parado-1.png      -> Fighting guard stance, frame 1 of breathing idle: knees slightly bent, fists up in front of the chest, exactly like the mannequin.
+02-parado-2.png      -> Fighting guard stance, frame 2 of breathing idle: same guard, body slightly lower, exactly like the mannequin.
+03-parado-3.png      -> Fighting guard stance, frame 3 of breathing idle, exactly like the mannequin.
+04-parado-4.png      -> Fighting guard stance, frame 4 of breathing idle, exactly like the mannequin.
+05-soco-preparo.png  -> Start of a jab punch: guard up, weight on the back leg, exactly like the mannequin.
+06-soco-esticado.png -> Jab punch fully extended to the RIGHT, front arm straight with closed fist, exactly like the mannequin.
+
+---------------------------------------------------------------------
+DICAS
+---------------------------------------------------------------------
+- Gemini (gemini.google.com): anexe as 2 imagens no clipe, cole o texto, envie.
+- ChatGPT: o mesmo. Se ele perguntar algo, responda "follow the prompt exactly".
+- Confira antes de salvar: dreads escuros com anel dourado no topo, oculos, barba grisalha,
+  BOOM RAP amarelo, corrente grossa, calca cargo preta, TENIS OUS preto de skate (sola branca grossa), olhando para a DIREITA.
+- Comece pelas 6. Eu coloco no jogo, voce ve, e ai seguimos para chute, pulo, dor, queda etc.

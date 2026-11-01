@@ -1,0 +1,78 @@
+MC SUPREMO - PACOTE 2: LUTA (07 a 15) + MANOBRAS DE SKATE (16 a 25)
+=====================================================================
+Mesmas regras de sempre:
+1. Conversa NOVA para cada pose.
+2. Anexe SEMPRE: 00-REFERENCIA-personagem.png + o arquivo da pose.
+3. Cole o PROMPT FIXO certo (A para luta, B para skate) + a linha da pose.
+4. Veio errado? Conversa nova, gera de novo. Nao peca correcao.
+5. Salve com o mesmo nome da pose (ex.: 07-apanhando-1.png).
+
+=====================================================================
+PROMPT FIXO A - LUTA (poses 07 a 15)  -  SEM skate
+=====================================================================
+Create ONE single game sprite of the character shown in the FIRST image, posed EXACTLY like the mannequin in the SECOND image.
+THE SECOND IMAGE IS ONLY A POSE GUIDE: copy only the body position, angles of arms, legs, torso and head. Do NOT copy its body, skin, muscles or nudity.
+
+CHARACTER (must be identical in every image, do not change anything):
+- Name: "Cabeca de Abacaxi", Brazilian rapper and skater, adult Black man around 40 years old, medium-dark brown skin.
+- Hair: long DARK BROWN dreadlocks (not blond, not yellow), gathered up and back in a high half-ponytail tied with ONE gold ring on top, dreads falling to the back of the head and shoulders, small gold beads on some dread tips. Short shaved sides.
+- Face: black rectangular eyeglasses with thin black frames, short salt-and-pepper (grey) beard and mustache, small gold earring.
+- Clothes: plain BLACK hoodie (hood down) with "BOOM RAP" in big yellow-gold blocky letters on the chest (BOOM on top, RAP below), kangaroo pocket; THICK GOLD Cuban link chain over the hoodie; BLACK cargo jogger pants with side cargo pockets.
+- Shoes: BLACK OUS skate shoes (Brazilian skateboarding brand): chunky padded skate sneakers, all-black suede upper, black laces, thick puffy tongue, WHITE rubber cupsole.
+- Body: average athletic build, normal proportions.
+
+VIEW AND STYLE:
+- Side view (profile / slight 3/4), character FACING RIGHT, full body, nothing cropped.
+- Same art style as the FIRST image: clean cartoon game art, bold dark outline, cel shading, like a modern Streets of Rage 4 sprite.
+- No skateboard, no weapon, no props, no floor shadow, no text other than BOOM RAP.
+- Background: flat solid pure white (#FFFFFF). Square image, character centered, about 85% of the image height.
+
+POSE:
+
+--- linhas (cole depois de "POSE:") ---
+07-apanhando-1.png   -> Getting hit in the face: head and torso snapping back, arms loose, pained face, exactly like the mannequin.
+08-apanhando-2.png   -> Recoiling from a hit to the stomach: bent forward, one hand on the belly, exactly like the mannequin.
+09-agarrao.png       -> Grabbing an (invisible) opponent by the collar with both hands at chest height, leaning forward, exactly like the mannequin.
+10-joelhada.png      -> Knee strike: front knee driven up high, both hands pulling down (as if holding someone's head), exactly like the mannequin.
+11-arremesso-1.png   -> Throw, part 1: twisting the body, lifting an (invisible) opponent over the shoulder, exactly like the mannequin.
+12-arremesso-2.png   -> Throw, part 2: body turned, arms swinging down to slam the (invisible) opponent behind, exactly like the mannequin.
+13-levantar-1.png    -> Getting up from the floor: on one knee pushing the ground with one hand, exactly like the mannequin.
+14-levantar-2.png    -> Almost standing: crouched, rising back to guard, exactly like the mannequin.
+15-voadora.png       -> Flying kick in the air: front leg fully extended forward, back leg tucked, arms in guard, exactly like the mannequin.
+
+=====================================================================
+PROMPT FIXO B - MANOBRAS DE SKATE (poses 16 a 25)  -  COM skate
+=====================================================================
+(O desenho de palito anexado e so uma ideia da posicao. Vale mais o nome e a descricao da manobra.)
+
+Create ONE single game sprite of the character shown in the FIRST image doing the skateboard trick described below. The SECOND image is only a rough stick-figure guide of the body position.
+
+CHARACTER (must be identical in every image, do not change anything):
+- Name: "Cabeca de Abacaxi", Brazilian rapper and skater, adult Black man around 40 years old, medium-dark brown skin.
+- Hair: long DARK BROWN dreadlocks (not blond, not yellow), gathered up and back in a high half-ponytail tied with ONE gold ring on top, dreads falling to the back of the head and shoulders, small gold beads on some dread tips. Short shaved sides.
+- Face: black rectangular eyeglasses with thin black frames, short salt-and-pepper (grey) beard and mustache, small gold earring.
+- Clothes: plain BLACK hoodie (hood down) with "BOOM RAP" in big yellow-gold blocky letters on the chest (BOOM on top, RAP below), kangaroo pocket; THICK GOLD Cuban link chain over the hoodie; BLACK cargo jogger pants with side cargo pockets.
+- Shoes: BLACK OUS skate shoes (Brazilian skateboarding brand): chunky padded skate sneakers, all-black suede upper, black laces, thick puffy tongue, WHITE rubber cupsole.
+- SKATEBOARD (always the same): black griptape deck with natural wood edge, silver trucks, white wheels, popsicle shape.
+- Body: average athletic build, normal proportions.
+
+VIEW AND STYLE:
+- Side view (profile / slight 3/4), character FACING RIGHT (nose of the board pointing RIGHT), full body and full skateboard, nothing cropped.
+- Same art style as the FIRST image: clean cartoon game art, bold dark outline, cel shading, like a modern Streets of Rage 4 sprite.
+- When the trick is a grind or slide, draw ONLY a simple thin grey metal rail or concrete ledge under the board, nothing else.
+- No other props, no floor shadow, no text other than BOOM RAP.
+- Background: flat solid pure white (#FFFFFF). Square image, character centered, about 85% of the image height.
+
+TRICK:
+
+--- linhas (cole depois de "TRICK:") ---
+16-ollie.png              -> OLLIE: in the air at the top of the jump, knees bent and pulled up, back foot on the tail, front foot sliding up the nose, board level under the feet, arms open for balance.
+17-slide-5050.png         -> 50-50 GRIND on a rail: both trucks on the rail, board parallel to the rail, knees bent, arms open wide for balance.
+18-crooked-grind.png      -> CROOKED GRIND on a ledge: only the front truck on the ledge, board angled with the nose pressed down, weight forward, crouched low.
+19-rock-slide.png         -> ROCK SLIDE (rock and roll) on the ledge edge: the middle of the board resting on the edge, nose up in the air, tail down, body upright, arms up.
+20-tail-slide.png         -> TAILSLIDE on a ledge: the tail of the board sliding on the ledge, nose up, weight on the back foot, leaning back, arms open.
+21-front-tail-slide.png   -> FRONTSIDE TAILSLIDE: body turned facing the ledge, tail of the board sliding on the ledge, shoulders twisted, one arm forward one arm back.
+22-front-nose-slide.png   -> FRONTSIDE NOSESLIDE: body turned facing the ledge, only the nose of the board sliding on the ledge, tail up, weight on the front foot, leaning forward.
+23-giro-360.png           -> SPECIAL ATTACK: spinning 360 degrees holding the skateboard with both hands at arm's length like a weapon, board swinging horizontally, motion blur on the board.
+24-blitz-investida.png    -> CHARGE ATTACK: rushing forward, holding the skateboard in front with both hands like a shield/ram, body leaning forward, one foot behind.
+25-pancada-shape.png      -> OVERHEAD STRIKE: holding the skateboard by the tail with both hands raised high above the head, about to smash down.
