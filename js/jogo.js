@@ -1,4 +1,4 @@
-// MC SUPREMO · motor do jogo (Nicosheik Labs)
+// MC SUPREMO · motor do jogo (NicoShake Labs)
 // Conteudo (imagens, musicas, fases, ajustes) fica em js/dados.js
 // contagem pra barra de carregamento
 let _imgTot=0,_imgOk=0;
@@ -4053,7 +4053,7 @@ function drawHub(){
      cx.fillStyle=r?NOTA_COR[r.n]:"#4a4238";cx.font='14px "Press Start 2P",monospace';cx.fillText(r?r.n:"-",x,565);}}
   cx.fillStyle="#6d6357";cx.font='11px "Press Start 2P",monospace';
   cx.fillText("★ "+String(score).padStart(7,"0"),W/2,696);
-  cx.fillStyle="#4a4238";cx.font='11px "Press Start 2P",monospace';cx.fillText("NicoSheik Labs",W/2,714);
+  cx.fillStyle="#4a4238";cx.font='11px "Press Start 2P",monospace';cx.fillText("NicoShake Labs",W/2,714);
   cx.textAlign="left";}
 // ---------- opcoes da tela de derrota ----------
 const OPT_CONTINUAR={label:"CONTINUAR",sub:()=>ckpt&&ckpt.boss?"Volta direto na luta contra o chefe":"Volta no início da onda "+((ckpt?ckpt.onda:0)+1)+"/"+ondas.length+" · vida cheia",
@@ -4153,7 +4153,7 @@ function drawCredits(dt){
   linhas.push({t:"TURNE UNDERGROUND",f:11,c:"#8a7a5a",pad:26});
   linhas.push({t:"PORTO ALEGRE \\u00b7 RS",f:11,c:"#8a7a5a",pad:60});
   linhas.push({t:"UM JOGO DE",f:9,c:"#6d6357",pad:26});
-  linhas.push({t:"NICOSHEIK LABS",f:13,c:"#c9b98f",pad:50});
+  linhas.push({t:"NICOSHAKE LABS",f:13,c:"#c9b98f",pad:50});
   for(const c of (P.creditosArte||[]))linhas.push({t:c.toUpperCase(),f:7,c:"#6d6357",pad:22});
   linhas.push({t:"",f:7,pad:40});
   let y=H-credScroll+40;
@@ -4244,7 +4244,7 @@ async function geraCard(semImg){
   // rodape
   g.strokeStyle="#6a5a3a";g.lineWidth=3;g.setLineDash([12,10]);g.beginPath();g.moveTo(70,1222);g.lineTo(1010,1222);g.stroke();g.setLineDash([]);
   g.fillStyle=OURO;g.font=F(26);g.textAlign="left";g.fillText("VEM ME SUPERAR!",70,1290);
-  g.fillStyle=CINZA;g.font=F(18);g.textAlign="right";g.fillText("MC SUPREMO · Nicosheik Labs",1010,1290);
+  g.fillStyle=CINZA;g.font=F(18);g.textAlign="right";g.fillText("MC SUPREMO · NicoShake Labs",1010,1290);
   // aberto direto do disco (file://) o Chrome bloqueia exportar canvas com imagens de arquivo: refaz sem elas
   try{return await new Promise((r,rj)=>{try{c.toBlob(r,'image/png');}catch(e){rj(e);}});}
   catch(e){return semImg?null:await geraCard(true);}}
@@ -5083,7 +5083,7 @@ requestAnimationFrame(loop);
    pra sobreviver ao botão de salvar/gerar versão, que captura o HTML logo no
    início da página e só preserva o que já está dentro deste bloco) ===== */
 /* ============================================================================
-   BOSS TOUCH MOBILE — MC SUPREMO (Nicosheik Labs)
+   BOSS TOUCH MOBILE — MC SUPREMO (NicoShake Labs)
    ----------------------------------------------------------------------------
    Módulo independente para adaptar a mecânica de Boss (QTE de botões,
    combo de 5 hits, esquiva do contra-ataque e tela de vitória com
