@@ -1,6 +1,6 @@
 # MC SUPREMO · versão em pasta
 
-Nicosheik Labs · beat 'em up mobile 2.5D · Turnê Underground de Reggae em Porto Alegre
+Inovação Labs · beat 'em up mobile 2.5D · Turnê Underground de Reggae em Porto Alegre
 
 ## Estrutura
 

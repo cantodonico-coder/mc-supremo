@@ -1,5 +1,5 @@
 // =====================================================================
-// MC SUPREMO · DADOS DO JOGO (NicoShake Labs)
+// MC SUPREMO · DADOS DO JOGO (Inovação Labs)
 // Tudo que e CONTEUDO fica aqui: caminhos das imagens, musicas, fases e ajustes.
 // O motor do jogo fica em js/jogo.js.
 //
