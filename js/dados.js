@@ -145,6 +145,10 @@ P.regras = Object.assign(P.regras,{"slideCabecaCusto":0.08,"slideCabecaEspera":4
 
 // Fluidez: soco/chute mais curtos e encadeaveis; agarrao automatico ao andar colado no vilao (padrao SoR).
 // Vilao com arma: chance de ir buscar arma do chao, dano extra e solta ao cair.
+// LUTA SoR: malabarMax = hits no vilao no ar · malabarDano = fracao do dano no ar · malabarSobe = quanto o hit segura no ar ·
+// noChaoDano = fracao do dano do 🦵 no vilao caido (0 desliga) · fogoAmigo = faca/carrinho/investida machucam capangas (1/0) ·
+// escapaAgarrao = 👊 preso no agarrao escapa gastando vida verde (1/0)
+P.regras = Object.assign(P.regras,{"malabarMax":3,"malabarDano":0.75,"malabarSobe":260,"noChaoDano":0.4,"fogoAmigo":1,"escapaAgarrao":1});
 P.regras = Object.assign(P.regras,{"socoT":0.26,"chuteT":0.30,"agarraAndando":0.16,"vilaoPegaArma":0.6,"vilaoArmaDano":0.7,"vilaoArmaBusca":420});
 
 // sons de skate extras
