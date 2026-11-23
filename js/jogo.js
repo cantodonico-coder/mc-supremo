@@ -846,6 +846,36 @@ document.querySelectorAll('#tc .tb').forEach(b=>{const k=b.dataset.k;
   b.addEventListener('touchstart',on,{passive:false});b.addEventListener('touchend',off,{passive:false});
   b.addEventListener('touchcancel',off,{passive:false});b.addEventListener('mousedown',on);
   b.addEventListener('mouseup',off);b.addEventListener('mouseleave',off);});
+// ---------- TECLADO (PC) ----------
+// Andar: setas ou WASD · 👊 J · 🦵 K · ⤴️ Espaco · pausa Esc ou P · Enter confirma
+// (as letras seguem o KEY_MAP de dados.js; J/K/Espaco/setas funcionam sempre)
+(function(){
+  const dk={left:0,right:0,up:0,down:0},SETAS={arrowleft:'left',arrowright:'right',arrowup:'up',arrowdown:'down'};
+  const km=()=>(typeof KEY_MAP==="object"&&KEY_MAP)||{};
+  function dirDe(k){const m=km();for(const n of['left','right','up','down'])if(m[n]===k)return n;return SETAS[k]||null;}
+  function botaoDe(k){const m=km();if(k===' '||k===m.jump)return'jump';if(k==='j'||k===m.punch)return'punch';if(k==='k'||k===m.kick)return'kick';return null;}
+  function aplica(){keys.left=dk.left;keys.right=dk.right;keys.up=dk.up;keys.down=dk.down;
+    let ax=dk.right-dk.left,ay=dk.down-dk.up;if(ax&&ay){ax*=0.7071;ay*=0.7071;}keys.ax=ax;keys.ay=ay;}
+  function luz(b,on){const el=document.querySelector('#tc .tb[data-k="'+b+'"]');if(el)el.classList.toggle('on',on);}
+  function solta(){for(const d in dk)dk[d]=0;aplica();for(const b of['punch','kick','jump']){held[b]=false;luz(b,false);}}
+  addEventListener('keydown',e=>{
+    if(e.ctrlKey||e.metaKey||e.altKey)return;
+    if(e.target&&/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName))return;  // digitando no painel: nao joga
+    const k=(e.key||'').toLowerCase();
+    if(k==='escape'||k==='p'){if(e.repeat)return;e.preventDefault();if(paused)despausar();else{solta();pausar();}return;}
+    if(k==='enter'){press.confirm=true;return;}
+    const d=dirDe(k);
+    if(d){e.preventDefault();if(e.repeat||dk[d])return;dk[d]=1;if(d==='left')pushSeq('l');if(d==='right')pushSeq('r');aplica();return;}
+    const b=botaoDe(k);if(!b)return;e.preventDefault();if(e.repeat)return;
+    AU.unlock();held[b]=true;luz(b,true);
+    if(b==='jump'){press.jump=true;press.jumpTaps.push(performance.now());press.confirm=true;pushSeq('j');}
+    else if(b==='punch'){press.punch=true;pushSeq('z');}
+    else{press.kick=true;pushSeq('c');}});
+  addEventListener('keyup',e=>{const k=(e.key||'').toLowerCase();
+    const d=dirDe(k);if(d){dk[d]=0;aplica();return;}
+    const b=botaoDe(k);if(b){held[b]=false;luz(b,false);}});
+  addEventListener('blur',solta);
+})();
 // ---------- manche virtual ANALOGICO e FLUTUANTE ----------
 // - Toque em qualquer ponto da metade esquerda: o manche nasce ali (nao precisa acertar o circulo).
 // - Analogico: keys.ax/keys.ay de -1 a 1 (inclinar pouco = andar devagar, diagonais suaves).
@@ -5215,7 +5245,7 @@ requestAnimationFrame(loop);
   // jogo (z=soco, c=chute, v=tiro, x=skate/esquiva), mas pode ser
   // sobrescrito com BossTouch.configureKeys({...}) — inclusive lendo o
   // KEY_MAP que o jogo já deixa configurável na tela de debug.
-  let keyMap = { punch: 'z', kick: 'c', shoot: 'v', skate: 'x' };
+  let keyMap = { punch: 'j', kick: 'k', shoot: 'v', skate: 'x' };   // igual ao teclado do jogo (J=👊, K=🦵)
   function configureKeys(map) {
     keyMap = Object.assign({}, keyMap, map || {});
   }
